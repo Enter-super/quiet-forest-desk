@@ -58,6 +58,9 @@ contextBridge.exposeInMainWorld('desktopShell', {
 
   netInfo() { return ipcRenderer.invoke('sys:net'); },
   setLevel(kind, value) { ipcRenderer.send('sys:level', kind, value); },
+  getLevel() { return ipcRenderer.invoke('sys:getLevel'); },
+  pickApps() { return ipcRenderer.invoke('dialog:pickApps'); },
+  capsuleSize(open) { ipcRenderer.send('capsule:size', !!open); },
 
   quit() { ipcRenderer.send('app:quit'); },
   setAlwaysOnTop(on) { ipcRenderer.send('app:setTop', !!on); },

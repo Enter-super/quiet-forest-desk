@@ -166,8 +166,12 @@ function createTray() {
 let zones = { rects: [], full: false };
 let cursorTimer = null;
 
+let fullSince = 0;
+
 ipcMain.on('overlay:zones', (_e, rects, full) => {
   zones = { rects: Array.isArray(rects) ? rects : [], full: !!full };
+  if (!full) fullSince = 0;
+  else if (!fullSince) fullSince = Date.now();
 });
 
 function applyIgnore(ignore) {
@@ -190,7 +194,10 @@ function startCursorWatch() {
     const b = win.getBounds();
     const x = p.x - b.x;
     const y = p.y - b.y;
-    const inside = zones.full || zones.rects.some(
+    /* 看门狗：full 最多生效 3 秒。渲染进程里任何一个状态卡住（抽屉开着、
+       拖拽标志没复位、弹窗残留）都会让整屏被覆盖层吃掉，桌面就点不动、右键失效。 */
+    const fullAlive = zones.full && fullSince && (Date.now() - fullSince < 3000);
+    const inside = fullAlive || zones.rects.some(
       (r) => x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h
     );
     applyIgnore(!inside);
