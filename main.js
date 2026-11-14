@@ -384,15 +384,64 @@ ipcMain.handle('sys:net', async () => {
   });
 });
 
-ipcMain.on('sys:level', (_e, kind, value) => {
-  const { spawn } = require('node:child_process');
-  const v = Math.max(0, Math.min(100, Number(value) || 0));
+/* 亮度 / 音量：滑杆 → 系统 */
+let volLevel = 50;
+
+function runPs(cmd, timeout = 8000) {
+  return new Promise((resolve) => {
+    try {
+      const { execFile } = require('node:child_process');
+      execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', cmd],
+        { windowsHide: true, timeout }, (err, stdout, stderr) => {
+          resolve({ ok: !err, out: (stdout || '').trim(), err: err ? String(stderr || err.message).trim() : '' });
+        });
+    } catch (e) { resolve({ ok: false, err: String(e) }); }
+  });
+}
+
+function logLevel(msg) {
+  try {
+    const fsx = require('node:fs');
+    const px = require('node:path');
+    fsx.appendFileSync(px.join(app.getPath('temp'), 'qfd-level.log'), new Date().toISOString() + '  ' + msg + '\n');
+  } catch { /* 忽略 */ }
+}
+
+ipcMain.on('sys:level', async (_e, kind, value) => {
+  const v = Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
   if (kind === 'bri') {
-    const script = `$m = Get-CimInstance -Namespace root/wmi -ClassName WmiMonitorBrightnessMethods -ErrorAction SilentlyContinue;`
-      + ` if ($m) { $m | Invoke-CimMethod -MethodName WmiSetBrightness -Arguments @{Timeout=1; Brightness=${v}} }`;
-    try { spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], { windowsHide: true, detached: true, stdio: 'ignore' }).unref(); } catch { }
+    const script = '$m = Get-CimInstance -Namespace root/wmi -ClassName WmiMonitorBrightnessMethods -ErrorAction SilentlyContinue;'
+      + ' if ($m) { $m | Invoke-CimMethod -MethodName WmiSetBrightness -Arguments @{Timeout=1; Brightness=' + v + '} }';
+    const r = await runPs(script);
+    logLevel('bri ' + v + ' -> ' + (r.ok ? 'ok' : 'ERR ' + r.err));
+    return;
+  }
+  if (kind === 'vol') {
+    const delta = v - volLevel;
+    volLevel = v;
+    const steps = Math.round(delta / 2);
+    if (!steps) { logLevel('vol ' + v + ' (no change)'); return; }
+    const scriptPath = require('node:path').join(__dirname, 'vol.ps1');
+    const r = await new Promise((resolve) => {
+      try {
+        const { execFile } = require('node:child_process');
+        execFile('powershell.exe',
+          ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', scriptPath, steps > 0 ? 'up' : 'down', String(Math.abs(steps))],
+          { windowsHide: true, timeout: 8000 },
+          (err, stdout, stderr) => resolve({ ok: !err, out: (stdout || '').trim(), err: err ? String(stderr || err.message).trim() : '' }));
+      } catch (err) { resolve({ ok: false, err: String(err) }); }
+    });
+    logLevel('vol ' + v + ' x' + Math.abs(steps) + (steps > 0 ? ' up' : ' down') + ' -> ' + (r.ok ? r.out : 'ERR ' + r.err));
   }
 });
+
+ipcMain.handle('sys:getLevel', async () => {
+  const r = await runPs('(Get-CimInstance -Namespace root/WMI -Class WmiMonitorBrightness).CurrentBrightness');
+  const bri = r.ok && /^\d+$/.test(r.out) ? Number(r.out) : null;
+  return { bri, vol: volLevel };
+});
+
+
 
 
 

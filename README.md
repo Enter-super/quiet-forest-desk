@@ -35,6 +35,7 @@ npm run dist
 main.js           主进程：窗口、托盘、鼠标热区、图标/系统能力 IPC
 preload.js        contextBridge 白名单
 mailer.js         邮件相关模块
+vol.ps1           音量键发送（keybd_event，绕过 SendKeys 不支持 VOLUME_* 的限制）
 app/index.html    页面结构
 app/app.js        渲染进程：胶囊、控制中心、Dock、设置
 app/styles.css    全部样式
@@ -67,6 +68,17 @@ try { win.setIgnoreMouseEvents(ignore, { forward: true }); } catch {}
 ```
 
 60ms 的轮询会不断把状态纠回正确值，即使中途被别人改掉，最多 60 毫秒自愈。
+
+## 已知修复：控制中心亮度 / 音量无效
+
+这版原来的 `sys:level` 只处理了 `bri`，`vol` 直接被丢弃；而亮度那条走的是
+`spawn(..., { detached: true, stdio: 'ignore' })`，失败也没有任何反馈。
+
+现在：
+- 亮度：`execFile` 调 WMI `WmiSetBrightness`，拿回 stdout/stderr 并写入 `%TEMP%\qfd-level.log`
+- 音量：`SendKeys` 不支持 `{VOLUME_UP}/{VOLUME_DOWN}`（会抛 ArgumentException），
+  改用 `vol.ps1` 里的 `keybd_event` 发 `VK_VOLUME_UP(0xAF)` / `VK_VOLUME_DOWN(0xAE)`，
+  滑块每格 2%
 
 ## License
 
