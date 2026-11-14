@@ -1,0 +1,38 @@
+{
+  "name": "quiet-forest-desk",
+  "productName": "静林桌面",
+  "version": "1.0.0",
+  "description": "Windows 桌面部件壳：灵动岛 + Nexus 风格 Dock + 时钟",
+  "main": "main.js",
+  "author": "QuietForest",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win --x64"
+  },
+  "devDependencies": {
+    "electron": "^45.3.1",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.quietforest.desk",
+    "productName": "静林桌面",
+    "files": [
+      "main.js",
+      "preload.js",
+      "app/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "app/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    }
+  }
+}

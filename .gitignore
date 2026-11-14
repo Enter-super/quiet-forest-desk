@@ -1,0 +1,9 @@
+node_modules/
+dist/
+release/
+*.log
+*.bak
+*.bak2
+*.bak4*
+.DS_Store
+Thumbs.db

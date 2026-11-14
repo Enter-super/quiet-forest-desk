@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>静林桌面</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ============ 壁纸（覆盖层里默认隐藏，露你自己的桌面） ============ -->
+<div class="wallpaper" id="wallpaper" aria-hidden="true">
+  <div class="wp-sky"></div>
+  <div class="wp-layer" id="wpFar"></div>
+  <div class="wp-layer" id="wpMid"></div>
+  <div class="wp-layer" id="wpNear"></div>
+  <div class="wp-layer" id="wpFore"></div>
+  <div class="wp-layer wp-haze" id="wpHaze"></div>
+  <div class="wp-band wp-band-1"></div>
+  <div class="wp-band wp-band-2"></div>
+  <div class="wp-fog-drift"></div>
+  <div class="wp-horizon"></div>
+  <div class="wp-vignette"></div>
+  <div class="wp-grain"></div>
+</div>
+
+<!-- ============ 桌面 ============ -->
+<main class="desktop" id="desktop">
+  <section class="clock" id="clock" role="group" aria-label="时钟">
+    <div class="clock-face">
+      <div class="clock-script" id="clockScript">Friday</div>
+      <div class="clock-time" id="clockTime">15:57</div>
+    </div>
+    <div class="clock-date" id="clockDate">27 October</div>
+    <div class="clock-meta">
+      <span id="clockTemps">16° / 9°C</span>
+      <span class="dot">·</span>
+      <span id="clockWind">Wind 14 km/h</span>
+      <span class="dot">·</span>
+      <span id="clockHum">Humidity 68%</span>
+    </div>
+  </section>
+</main>
+
+<!-- ============ Deskbox 抽屉 ============ -->
+<!-- 灵动胶囊：永远悬在屏幕顶部中间，鼠标一碰抽屉就下来 -->
+<button class="capsule" id="capsule" title="Deskbox · 悬停展开" aria-label="打开 Deskbox">
+  <span class="cap-time" id="capTime">12:02</span>
+  <span class="cap-weather">
+    <svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true">
+      <path d="M7 18h9.5a3.5 3.5 0 0 0 .3-6.98A5 5 0 0 0 7.2 9.5 4.25 4.25 0 0 0 7 18Z"
+            fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+    </svg>
+    <b id="capTemp">19°</b>
+  </span>
+  <span class="cap-dots" aria-hidden="true">
+    <i class="d-blue"></i><i class="d-green"></i><i class="d-amber"></i>
+  </span>
+</button>
+
+<div class="drawer-scrim" id="drawerScrim" style="display:none"></div>
+<section class="drawer" hidden id="drawer" aria-label="Deskbox 收纳抽屉" aria-hidden="true">
+  <header class="drawer-head" id="drawerHead">
+    <div class="grip" aria-hidden="true"></div>
+    <div class="drawer-title">
+      <span class="drawer-name">Deskbox</span>
+      <span class="drawer-count" id="drawerCount">0</span>
+    </div>
+    <div class="drawer-actions">
+      <button class="pill-btn" id="drawerManage" title="从桌面多选添加">管理</button>
+      <button class="pill-btn" id="drawerAddSection" title="新建分区">＋ 分区</button>
+    </div>
+  </header>
+  <div class="drawer-body">
+    <div class="section-list" id="sectionList"></div>
+    <p class="empty-note" id="gridEmpty" hidden>空着。把桌面图标拖进来，或点「管理」从桌面多选。</p>
+  </div>
+</section>
+
+<section class="cc" id="cc" aria-hidden="true">
+  <div class="cc-tabs" id="ccTabs">
+    <button class="cc-tab is-on" data-pane="home">主页</button>
+    <button class="cc-tab" data-pane="msg">消息<i class="tab-dot" id="tabDot"></i></button>
+    <button class="cc-tab" data-pane="control">控制</button>
+    <button class="cc-gear" id="ccGear" title="设置">
+      <svg viewBox="0 0 24 24" width="17" height="17"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M12 3.6v2.2M12 18.2v2.2M20.4 12h-2.2M5.8 12H3.6M17.9 6.1l-1.6 1.6M7.7 16.3 6.1 17.9M17.9 17.9l-1.6-1.6M7.7 7.7 6.1 6.1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+
+  <div class="cc-panes">
+    <div class="cc-pane is-on" data-pane="home">
+      <div class="home-top">
+        <div>
+          <div class="home-hi" id="homeHi">晚上好</div>
+          <div class="home-date" id="homeDate">11 月 14 日 · 周六</div>
+        </div>
+        <div class="home-wx">
+          <b id="homeTemp">16°</b>
+          <span id="homeWx">湿度 68% · 风 14 km/h</span>
+        </div>
+      </div>
+      <div class="home-tiles" id="homeTiles"></div>
+    </div>
+
+    <div class="cc-pane" data-pane="msg">
+      <div class="mail-stage">
+        <div class="mail-card" id="mailCard">
+          <div class="mc-label">验证码 / 当前邮箱</div>
+          <div class="mc-addr" id="mcAddr">me@qq.com</div>
+          <div class="mc-hint" id="mcCopy">点击复制地址</div>
+          <button class="mc-open" id="mcOpen">打开邮箱 ↗</button>
+        </div>
+        <div class="mail-side" id="mailSide"></div>
+        <div class="mail-msgs" id="mailMsgs"></div>
+      </div>
+      <div class="mail-dots" id="mailDots"></div>
+      <div class="msg-add">
+        <input id="mailName" class="cc-input" placeholder="备注（QQ 邮箱）" maxlength="20">
+        <input id="mailAddr" class="cc-input" placeholder="you@example.com" type="email">
+        <button class="cc-btn" id="mailAdd">添加</button>
+      </div>
+    </div>
+
+    <div class="cc-pane" data-pane="control">
+      <div class="cc-body">
+        <div class="cc-left">
+          <div class="cc-slider" id="ccVol" data-kind="vol">
+            <span class="s-ico"><svg viewBox="0 0 24 24" width="15" height="15"><path d="M4 10v4h3l4 3V7L7 10z" fill="currentColor"/><path d="M15 9.5a3.5 3.5 0 0 1 0 5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+            <div class="s-track"><div class="s-fill" style="width:49%"></div></div>
+            <span class="s-val">49</span>
+          </div>
+          <div class="cc-slider" id="ccBri" data-kind="bri">
+            <span class="s-ico"><svg viewBox="0 0 24 24" width="15" height="15"><circle cx="12" cy="12" r="3.4" fill="currentColor"/><path d="M12 3v2M12 19v2M21 12h-2M5 12H3M18.4 5.6 17 7M7 17l-1.4 1.4M18.4 18.4 17 17M7 7 5.6 5.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+            <div class="s-track"><div class="s-fill" style="width:79%"></div></div>
+            <span class="s-val">79</span>
+          </div>
+        </div>
+        <div class="cc-right">
+          <button class="cc-card" id="ccWifi">
+            <span class="c-ico"><svg viewBox="0 0 24 24" width="17" height="17"><path d="M3.5 9.5a13 13 0 0 1 17 0M6.5 12.8a9 9 0 0 1 11 0M9.5 16a5 5 0 0 1 5 0" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="12" cy="19" r="1.4" fill="currentColor"/></svg></span>
+            <span class="c-txt"><b>WLAN</b><i id="ccSsid">未连接</i></span>
+          </button>
+          <button class="cc-card" id="ccBt">
+            <span class="c-ico"><svg viewBox="0 0 24 24" width="17" height="17"><path d="M8 7l8 10V7L8 17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M12 2.5v19" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span>
+            <span class="c-txt"><b>蓝牙</b><i>已开启</i></span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ Dock ============ -->
+<nav class="dock-wrap" id="dockWrap">
+  <div class="dock" id="dock">
+    <div class="dock-startwrap" id="dockStartWrap">
+      <button class="dock-start" id="dockStart" title="设置" aria-label="设置">
+        <svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true">
+          <rect x="3" y="3" width="8" height="8" rx="1.6" fill="currentColor"/>
+          <rect x="13" y="3" width="8" height="8" rx="1.6" fill="currentColor"/>
+          <rect x="3" y="13" width="8" height="8" rx="1.6" fill="currentColor"/>
+          <rect x="13" y="13" width="8" height="8" rx="1.6" fill="currentColor"/>
+        </svg>
+      </button>
+      <div class="dock-sep" aria-hidden="true"></div>
+    </div>
+    <div class="dock-items" id="dockItems"></div>
+  <div class="apps-pop" id="appsPop" hidden>
+    <div class="apps-head">
+      <span>所有应用</span>
+      <span class="apps-count" id="appsCount"></span>
+    </div>
+    <div class="apps-grid" id="appsGrid"></div>
+  </div>
+    <div class="dock-drop" id="dockDrop" hidden>松手固定到 Dock</div>
+  </div>
+</nav>
+
+<!-- ============ 设置面板 ============ -->
+<aside class="panel" id="settingsPanel" aria-label="设置" aria-hidden="true">
+  <header class="panel-head">
+    <h2>设置</h2>
+    <button class="icon-btn" id="panelClose" aria-label="关闭设置">✕</button>
+  </header>
+
+  <div class="panel-body">
+    <section class="set-block">
+      <h3>壁纸</h3>
+      <label class="row" id="wallCoverRow">
+        <span>铺满桌面（盖住你的壁纸）</span>
+        <input type="checkbox" id="wallCover">
+      </label>
+      <div class="swatches" id="wallSwatches">
+        <button class="swatch is-on" data-preset="forest"><span style="background:linear-gradient(160deg,#8d9a97,#2a3433)"></span>幽林</button>
+        <button class="swatch" data-preset="dusk"><span style="background:linear-gradient(160deg,#6d6a78,#241f27)"></span>暮色</button>
+        <button class="swatch" data-preset="paper"><span style="background:linear-gradient(160deg,#d9d6cd,#8d8a80)"></span>素墨</button>
+        <button class="swatch" data-preset="custom"><span style="background:linear-gradient(160deg,#3a4142,#202627)">＋</span>自定义</button>
+      </div>
+      <label class="file-drop" id="wpFileLabel">
+        <input type="file" id="wpFile" accept="image/*" hidden>
+        <span id="wpFileNote">选一张本地图片作为壁纸（≤ 8MB）</span>
+      </label>
+    </section>
+
+    <section class="set-block">
+      <h3>时钟</h3>
+      <label class="row">
+        <span>显示时钟</span>
+        <input type="checkbox" id="clockVisible" checked>
+      </label>
+      <div class="row-actions">
+        <button class="ghost-btn" id="clockReset">回到默认位置</button>
+        <button class="ghost-btn" id="weatherRefresh">刷新天气</button>
+      </div>
+      <p class="set-note" id="weatherNote">天气为可编辑模拟值；联网成功时读取一次真实数据。</p>
+    </section>
+
+    <section class="set-block">
+      <h3>邮箱（IMAP）</h3>
+      <div class="mail-form">
+        <input id="mHost" class="cc-input" placeholder="imap.qq.com">
+        <input id="mPort" class="cc-input" placeholder="993" value="993">
+        <input id="mUser" class="cc-input" placeholder="you@qq.com">
+        <input id="mPass" class="cc-input" type="password" placeholder="授权码（不是登录密码）">
+      </div>
+      <div class="row-actions">
+        <button class="ghost-btn" id="mBind">绑定并收取</button>
+        <button class="ghost-btn" id="mRefresh">立即刷新</button>
+        <button class="ghost-btn ghost-danger" id="mUnbind">解除绑定</button>
+      </div>
+      <p class="set-note" id="mNote">QQ 邮箱：设置 → 账户 → 开启 IMAP → 生成授权码，服务器 imap.qq.com:993。绑定后每分钟自动收一次。</p>
+    </section>
+
+    <section class="set-block">
+      <h3>数据</h3>
+      <div class="row-actions">
+        <button class="ghost-btn" id="dataExport">导出配置</button>
+        <button class="ghost-btn" id="dataImport">导入配置</button>
+        <button class="ghost-btn ghost-danger" id="dataReset">恢复默认</button>
+        <button class="ghost-btn" id="appQuit" hidden>退出应用</button>
+      </div>
+      <input type="file" id="importFile" accept="application/json,.json" hidden>
+    </section>
+
+    <section class="set-block about">
+      <h3>怎么用</h3>
+      <dl class="keys">
+        <div><dt>hover 顶部</dt><dd>自动展开抽屉</dd></div>
+        <div><dt>点抽屉外</dt><dd>收起</dd></div>
+        <div><dt>拖桌面图标</dt><dd>拖到 Dock 或抽屉里即成</dd></div>
+        <div><dt>右键图标</dt><dd>打开 / 定位 / 属性 / 移除</dd></div>
+        <div><dt>双击分区名</dt><dd>改名</dd></div>
+        <div><dt>托盘图标</dt><dd>置顶、开机自启、退出</dd></div>
+      </dl>
+    </section>
+  </div>
+</aside>
+
+<!-- ============ 从桌面多选添加 ============ -->
+<div class="dialog-root" id="pickerRoot" hidden style="display:none">
+  <div class="dialog-scrim" id="pickerScrim"></div>
+  <div class="dialog picker">
+    <h2 class="dialog-title">从桌面添加</h2>
+    <div class="picker-bar">
+      <select class="input" id="pickerSection"></select>
+      <button class="ghost-btn" id="pickerAll">全选</button>
+    </div>
+    <div class="place-row" id="placeRow"></div>
+    <div class="picker-list" id="pickerList"></div>
+    <div class="dialog-actions">
+      <span class="spacer"></span>
+      <button class="ghost-btn" id="pickerCancel">取消</button>
+      <button class="primary-btn" id="pickerAdd">添加所选</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 重命名 / 编辑条目 ============ -->
+<div class="dialog-root" id="dialogRoot" hidden>
+  <div class="dialog-scrim" id="dialogScrim"></div>
+  <form class="dialog" id="dialog" autocomplete="off">
+    <h2 class="dialog-title" id="dialogTitle">重命名</h2>
+    <div class="field">
+      <label for="fName">显示名称</label>
+      <input id="fName" class="input" maxlength="32" placeholder="名字">
+    </div>
+    <div class="field">
+      <label for="fPath">指向的文件</label>
+      <input id="fPath" class="input" readonly>
+    </div>
+    <div class="dialog-actions">
+      <button type="button" class="ghost-btn ghost-danger" id="dialogDelete">移除</button>
+      <span class="spacer"></span>
+      <button type="button" class="ghost-btn" id="dialogCancel">取消</button>
+      <button type="submit" class="primary-btn" id="dialogSave">保存</button>
+    </div>
+  </form>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
