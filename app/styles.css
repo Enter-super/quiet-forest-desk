@@ -1786,3 +1786,15 @@ body.drawer-open .capsule { transform: translateX(-50%) translateY(-10px) scale(
 
 .mail-msgs { display: none; }
 .mail-msgs.is-on { display: block; }
+
+/* 验证码卡片：识别到验证码时放大变绿，无验证码时保持普通邮箱样式 */
+.mail-card.has-otp .mc-addr {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: #35e07a;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+.mail-card.has-otp .mc-label { color: rgba(53, 224, 122, .75); }
+.mail-card .mc-addr { word-break: break-all; }

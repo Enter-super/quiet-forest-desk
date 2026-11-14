@@ -75,14 +75,20 @@ function fetchInbox({ host, port = 993, user, pass, limit = 5 }) {
     const send = (cmd) => { tag += 1; sock.write(`A${tag} ${cmd}\r\n`); return `A${tag}`; };
     let curTag = null;
 
-    sock.on('connect', () => {
-      curTag = send(`LOGIN "${user.replace(/"/g, '\\"')}" "${String(pass).replace(/"/g, '\\"')}"`);
-      stage = 1;
-    });
-
+    /* IMAP 规定：必须先读到服务器的问候语 * OK / * PREAUTH，才能发命令。
+       握手完成就抢发 LOGIN 会被服务器忽略，之后永远等不到回应 → 20 秒超时。 */
     sock.on('data', (chunk) => {
       raw = Buffer.concat([raw, Buffer.from(chunk, 'latin1')]);
       const { text } = extractLiterals(raw);
+
+      /* 问候语到达后再登录 */
+      if (stage === 0) {
+        if (/^\* (OK|PREAUTH)/m.test(text)) {
+          curTag = send(`LOGIN "${String(user).replace(/"/g, '\\"')}" "${String(pass).replace(/"/g, '\\"')}"`);
+          stage = 1;
+        }
+        return;
+      }
       if (stage === 1 && new RegExp(`^A${tag} (OK|NO|BAD)`, 'm').test(text)) {
         if (new RegExp(`^A${tag} BAD`, 'm').test(text)) { clearTimeout(timer); finish(new Error('登录失败：检查邮箱/授权码')); return; }
         if (new RegExp(`^A${tag} NO`, 'm').test(text)) { clearTimeout(timer); finish(new Error('登录被拒绝：多半要授权码而不是密码')); return; }

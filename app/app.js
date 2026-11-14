@@ -1223,16 +1223,28 @@
   let mailIndex = 0;
   let mailData = { count: 0, messages: [], error: '', bound: false, user: '' };
 
-  function parseCode(subject) {
-    const m = String(subject || '').match(/(?<!\d)(\d{4,8})(?!\d)/);
-    return m ? m[1] : '';
+  /* 验证码识别：必须出现"验证码/校验码/code/verify"这类关键词，
+     否则 GitHub 通知里的日期、编号都会被误判成验证码。 */
+  /* 关键词要足够宽：像「iTab邮箱验证提醒153402」这种标题里并没有"验证码"三个字 */
+  const OTP_KEY = /(验证码|校验码|动态码|动态密码|确认码|激活码|安全码|登录码|绑定码|口令|验证|认证|verification\s*code|verify|passcode|\botp\b|\bcode\b)/i;
+
+  let curOtp = '';
+
+  function pickOtp(msg) {
+    if (!msg) return '';
+    const subject = String(msg.subject || '');
+    const from = String(msg.from || '');
+    if (!OTP_KEY.test(subject) && !OTP_KEY.test(from)) return '';
+    const hits = subject.match(/(?<!\d)(\d{4,8})(?!\d)/g) || [];
+    if (!hits.length) return '';
+    return hits[hits.length - 1];
   }
 
   /* 真实邮件（IMAP）→ 右侧列表 + 左侧大卡的验证码 */
   function renderLiveMail() {
     const side = $('#mailSide');
     if (!side) return;
-    if (!mailData.bound) { renderMail(); return; }
+    if (!mailData.bound) { curOtp = ''; const c0 = $('#mailCard'); if (c0) c0.classList.remove('has-otp'); const l0 = $('.mc-label'); if (l0) l0.textContent = '当前邮箱'; renderMail(); return; }
     const msgs = mailData.messages || [];
     side.innerHTML = mailData.error
       ? `<div class="ms-empty">收取失败：${esc(mailData.error)}</div>`
@@ -1245,15 +1257,28 @@
           </div>`).join('')
         : '<div class="ms-empty">收件箱是空的</div>';
 
-    const code = parseCode(msgs[0] && msgs[0].subject);
+    /* 从最新往旧找第一条带验证码的邮件 */
+    let hit = null;
+    for (const m of msgs) {
+      const c = pickOtp(m);
+      if (c) { hit = { code: c, msg: m }; break; }
+    }
+    curOtp = hit ? hit.code : '';
+
+    const card = $('#mailCard');
+    const label = $('.mc-label');
     const addr = $('#mcAddr');
+    const copy = $('#mcCopy');
+
+    if (card) card.classList.toggle('has-otp', !!hit);
+    if (label) label.textContent = hit ? '验证码' : '当前邮箱';
     if (addr) {
-      addr.textContent = code || mailData.user || '';
-      addr.style.color = code ? '#35e07a' : '';
+      addr.textContent = hit ? hit.code : (mailData.user || '');
       addr.style.opacity = '1';
     }
-    const copy = $('#mcCopy');
-    if (copy) copy.textContent = code ? '验证码 · 点击复制' : '点击邮箱地址复制';
+    if (copy) {
+      copy.textContent = hit ? ('来自 ' + (hit.msg.from || '邮件') + ' · 点击复制') : '点击邮箱地址复制';
+    }
     const dots = $('#mailDots');
     if (dots) dots.innerHTML = '';
   }
@@ -1329,6 +1354,11 @@
     });
 
     $('#mcCopy').addEventListener('click', async () => {
+      if (curOtp) {
+        try { await navigator.clipboard.writeText(curOtp); toast('验证码已复制：' + curOtp); }
+        catch { toast('复制失败，手动选一下'); }
+        return;
+      }
       const m = (state.mailboxes || [])[mailIndex];
       if (!m) return;
       try { await navigator.clipboard.writeText(m.addr); toast('地址已复制'); }

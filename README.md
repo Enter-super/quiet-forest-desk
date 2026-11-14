@@ -80,6 +80,39 @@ try { win.setIgnoreMouseEvents(ignore, { forward: true }); } catch {}
   改用 `vol.ps1` 里的 `keybd_event` 发 `VK_VOLUME_UP(0xAF)` / `VK_VOLUME_DOWN(0xAE)`，
   滑块每格 2%
 
+## 已知修复：IMAP 连接超时
+
+原实现在 `sock.on('connect')`（TCP 已连、TLS 未完成）就写 `LOGIN`，数据被丢弃；
+服务器随后只发了问候语 `* OK`，客户端却一直在等 `A1 OK`，20 秒后报「连接 IMAP 超时」。
+
+IMAP 规定必须**先读到服务器问候语**才能发命令，现改为：
+
+```js
+if (stage === 0) {
+  if (/^\* (OK|PREAUTH)/m.test(text)) {
+    curTag = send(`LOGIN "..." "..."`);
+    stage = 1;
+  }
+  return;
+}
+```
+
+实测：20 秒超时 → 515 毫秒拿到服务器真实回应。
+
+## 验证码识别
+
+`消息` 页会从最近几封邮件里找验证码，命中才显示；没有命中时卡片显示当前邮箱，不出现验证码区域。
+
+识别条件是「关键词 + 数字」双条件，避免 GitHub 通知里的日期/编号被误判：
+
+```js
+const OTP_KEY = /(验证码|校验码|动态码|确认码|激活码|安全码|登录码|绑定码|口令|验证|认证|verification code|verify|passcode|otp|code)/i;
+hits = subject.match(/(?<!\d)(\d{4,8})(?!\d)/g);
+return hits[hits.length - 1];
+```
+
+单独的「验证」是必须的 —— 像 `iTab邮箱验证提醒153402` 这种标题里并没有「验证码」三个字。
+
 ## License
 
 MIT
