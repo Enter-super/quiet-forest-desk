@@ -172,9 +172,14 @@ ipcMain.on('overlay:zones', (_e, rects, full) => {
 
 function applyIgnore(ignore) {
   if (!win || win.isDestroyed()) return;
-  if (ignore === ignoreMouse) return;
+  /* 只有"接管鼠标"时才允许跳过；恢复穿透必须真的下发一次。
+     原来的 `if (ignore === ignoreMouse) return;` 是单点故障：
+     一旦 Windows 侧状态被 setFocusable / focus / 置顶 改掉，
+     内部变量与真实状态就永久不一致，覆盖层会一直吃鼠标：
+     桌面点不动、右键无菜单、拖放也失效。 */
+  if (ignore === ignoreMouse && ignore !== true) return;
   ignoreMouse = ignore;
-  win.setIgnoreMouseEvents(ignore, { forward: true });
+  try { win.setIgnoreMouseEvents(ignore, { forward: true }); } catch { /* 忽略 */ }
 }
 
 function startCursorWatch() {

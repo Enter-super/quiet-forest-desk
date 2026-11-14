@@ -1,31 +1,16 @@
 # 静林桌面 · QuietForestDesk
 
-一个 Windows 桌面部件壳（Electron）。把 **灵动岛**、**Nexus 风格 Dock**、**桌面时钟** 三样东西贴在桌面上，
-不遮挡任何应用窗口，所有内容都在桌面层。
+Windows 桌面部件壳（Electron）。把 **顶部胶囊**、**底部 Dock**、**控制中心** 贴在桌面层，
+不遮挡任何应用窗口。
 
 ![icon](app/icon.png)
 
-## 功能
+## 结构
 
-### 灵动岛
-- 顶部居中胶囊，悬停 **1.3 秒**或单击展开
-- 展开后是毛玻璃面板，分 **主页 / 设置** 两个页签
-- 主页：大时间、日期、电量、网络、蓝牙状态 + 消息列表（支持一键清空）
-- 设置：亮度、音量滑块；飞行模式 / WiFi / 蓝牙开关（直接调系统接口，不跳设置页）
-- 可拖动到任意位置，位置记忆在 localStorage
-
-### Dock
-- 底部居中，图标悬停放大（Nexus 式）
-- **悬停 ⊞ 向上展开应用面板**，列出 Dock + 桌面全部软件和文件（含文件夹）
-- **单击 ⊞ 打开设置**
-- **拖动图标可排序**（按住 5px 后进入拖拽，松手落位）
-- **右键图标**：打开 / 打开文件所在位置 / 移出 Dock
-- **右键 Dock 空白处**：选择文件加入 Dock（支持 .lnk / .exe / .url / .bat）
-- 拖文件到 Dock 时会插入虚线占位块，图标向两边让开
-
-### 时钟
-- 屏幕居中，走字、日期、天气占位信息
-- 位置可拖动并记忆
+- **顶部胶囊**：时间 + 天气 + 电量；悬停/点击展开控制中心
+- **控制中心**：两个页签（主页 / 设置），亮度与音量滑块、无线开关卡片、消息区
+- **底部 Dock**：应用图标（悬停放大），左侧 ⊞ 展开应用面板
+- **设置面板 / 添加对话框**：从桌面多选的 picker
 
 ## 运行
 
@@ -42,35 +27,46 @@ npm start
 npm run dist
 ```
 
-产物在 `dist/`（NSIS 安装包）。图标取自 `app/icon.ico`。
+产物在 `dist/`（NSIS 安装包），图标取自 `app/icon.ico`。
 
 ## 目录结构
 
 ```
-main.js           主进程：窗口、托盘、IPC（图标 / 截图 / 亮度 / 音量 / 无线开关 / 桌面清单）
-preload.js        contextBridge 暴露给页面的能力白名单
+main.js           主进程：窗口、托盘、鼠标热区、图标/系统能力 IPC
+preload.js        contextBridge 白名单
+mailer.js         邮件相关模块
 app/index.html    页面结构
-app/app.js        渲染进程：时钟、Dock、灵动岛、启动器、设置
+app/app.js        渲染进程：胶囊、控制中心、Dock、设置
 app/styles.css    全部样式
 app/icon.*        应用图标
 ```
 
-## 实现要点
+## 鼠标穿透是怎么做的
 
-- **桌面层窗口**：`transparent + frame:false + skipTaskbar`，全屏覆盖层；空白区域鼠标穿透，
-  只有指针落在部件上时通过 `setIgnoreMouseEvents(false)` 接管鼠标，靠主进程 60ms 轮询热区实现。
-- **永不遮挡应用**：窗口默认 `focusable:false` + `showInactive()`，不会被激活也不会被抬到最前。
-- **图标获取**：`app.getFileIcon` → `.lnk` 解析目标（`shell.readShortcutLink` + 二进制扫描兜底）→ 失败则画字母徽章。
-- **毛玻璃**：展开瞬间用 `desktopCapturer` 抓一帧背景并缓存，不做轮询（早期版本每秒 4~5 次全屏截图，CPU 3.9%）；
-  动画全部走 transform / opacity，静止时无动画。
-- **亮度**：WMI `WmiMonitorBrightnessMethods`；**音量**：`SendKeys {VOLUME_UP/DOWN}`；
-  **WiFi / 蓝牙**：`Enable/Disable-NetAdapter`、`Enable/Disable-PnpDevice`（需要管理员权限）。
+整屏覆盖层默认 `setIgnoreMouseEvents(true)`，鼠标事件直接落到桌面；
+渲染进程把「需要接管的矩形」通过 `overlay:zones` 上报，主进程每 60ms 读一次真实光标位置做命中检测，
+命中就把整层切成可点击，离开再切回穿透。
 
-## 已知限制
+## 已知修复：桌面右键失效
 
-- WiFi / 蓝牙开关需要以管理员身份运行，否则会提示权限不足
-- 音量无法读取系统当前值，滑块是相对调节（每格 2%）
-- 从桌面**拖放**文件到 Dock 依赖 Windows 对非激活窗口的拖放投递，部分环境下不生效，可用右键菜单替代
+`applyIgnore()` 里原来有这一行：
+
+```js
+if (ignore === ignoreMouse) return;   // 状态没变就跳过
+```
+
+一旦 Windows 侧的真实状态被 `setFocusable` / `focus` / 置顶等调用改动过，
+内部变量 `ignoreMouse` 仍记着旧值，两边永久不一致 —— 之后 `setIgnoreMouseEvents(true)` 再也不会被调用，
+覆盖层一直吞掉鼠标：**桌面图标点不动、右键没有菜单、拖放失效**。
+
+现在改为「要恢复穿透时强制下发」：
+
+```js
+if (ignore === ignoreMouse && ignore !== true) return;
+try { win.setIgnoreMouseEvents(ignore, { forward: true }); } catch {}
+```
+
+60ms 的轮询会不断把状态纠回正确值，即使中途被别人改掉，最多 60 毫秒自愈。
 
 ## License
 

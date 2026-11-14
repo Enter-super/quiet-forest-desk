@@ -351,6 +351,14 @@
   /* ---------------------------------------------------------------------- */
   const HIT_SELECTOR = '.clock, .dock, .dock-tip, .capsule, .apps-pop, .cc, .panel, .dialog-root, .ctx';
   let dragPinned = false;
+  let dragPinnedTimer = 0;
+  /* 拖动期间整屏接管鼠标；万一 pointerup 丢了会永远接管，这里加自动过期 */
+  function pinDrag(on) {
+    dragPinned = !!on;
+    clearTimeout(dragPinnedTimer);
+    if (on) dragPinnedTimer = setTimeout(() => { dragPinned = false; scheduleZones(); }, 3000);
+    scheduleZones();
+  }
   let zonesQueued = false;
 
   function publishZones() {
@@ -648,7 +656,7 @@
     if (!drag.moved) {
       if (Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) < 7) return;
       drag.moved = true;
-      dragPinned = true; scheduleZones();
+      pinDrag(true);
       drag.el.classList.add('is-dragging');
       if (drag.kind === 'dock') { releaseDock(); hideTip(); }
       closeCtx();
