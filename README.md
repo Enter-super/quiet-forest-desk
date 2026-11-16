@@ -57,6 +57,7 @@ app/icon.*        应用图标
 | 网络 | `net.ps1`：`Get-NetAdapterStatistics` 接收字节增量 |
 | 正在播放 | `media.ps1`：WinRT `GlobalSystemMediaTransportControlsSessionManager` |
 | 内存明细 | `memtop.ps1`：`Get-Process` 按进程名合并 `WS`，展开时每 2 秒刷新 |
+| 邮箱 | `mail:status` + `mail:update`（主进程广播到所有窗口），验证码用与胶囊相同的关键词规则 |
 | 待办 | `localStorage` |
 
 播放控制（上一首 / 暂停 / 下一首）由 `mediactl.ps1` 发系统媒体键 `VK_MEDIA_*`。
@@ -72,6 +73,9 @@ app/icon.*        应用图标
 主进程用 `screen.screenToDipPoint()` 换算成 DIP 后与 `getBounds()` 比较，落在面板外就收起并 kill 掉钩子进程。
 
 > 桌面覆盖层是 `WS_EX_NOACTIVATE`，点桌面不会让它失焦，所以单靠 `blur` 收不起来——这是必须用钩子的原因。
+
+侧边栏板块顺序：时钟 → 系统（内存可展开明细）→ 正在播放 → 邮箱 → 待办。
+内容超出屏幕时面板内部滚动，滚动条 4px、与邮箱列表同一样式（`::-webkit-scrollbar`，不用标准 `scrollbar-*` 属性，否则样式会被浏览器接管）。
 
 窗口高度由内容决定：渲染进程用 `ResizeObserver` 测 `.sb` 高度，通过 `sidebar:height` 上报，主进程夹在 `420 ~ 工作区高度-40` 之间后 `setBounds`。
 

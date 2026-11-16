@@ -21,6 +21,10 @@ html, body {
 
 .sb {
   width: 100%; min-height: 0;
+  /* 内容超出屏幕时：面板内部滚动，右侧出现细滚动条 */
+  max-height: var(--sb-max, 940px);
+  overflow-y: auto;
+  overflow-x: hidden;
   display: flex; flex-direction: column; gap: 12px;
   padding: 18px 16px 14px;
   border-radius: 26px;
@@ -176,3 +180,29 @@ body.is-paused .m-bars b { animation: none; transform: scaleY(.4); }
 .mi-bar { grid-column: 1 / -1; display: block; height: 3px; border-radius: 99px; background: rgba(255,255,255,.09); overflow: hidden; }
 .mi-bar > b { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, #7fdfc0, #9fd6ff); }
 .mem-empty { font-size: 11px; color: var(--dim); text-align: center; padding: 6px 0; }
+
+/* 邮箱板块 */
+.mail-addr { margin-left: auto; font-size: 11px; color: var(--dim); max-width: 62%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.otp-box[hidden] { display: none !important; }   /* 同 .mem-list，类选择器会盖掉 [hidden] */
+
+.otp-box {
+  display: flex; align-items: baseline; gap: 10px;
+  padding: 8px 10px; margin-bottom: 8px;
+  border-radius: 12px; background: rgba(53, 224, 122, .10);
+  border: 1px solid rgba(53, 224, 122, .26);
+}
+.otp-code { font-size: 24px; font-weight: 700; letter-spacing: 2px; color: #35e07a; font-variant-numeric: tabular-nums; }
+.otp-src { font-size: 10.5px; color: rgba(238,243,242,.5); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mail-list { display: flex; flex-direction: column; gap: 6px; max-height: 112px; overflow-y: auto; }
+.mail-list::-webkit-scrollbar { width: 4px; }
+.mail-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,.16); border-radius: 99px; }
+.mail-row { display: flex; flex-direction: column; gap: 1px; padding: 5px 0; border-top: 1px solid rgba(255,255,255,.05); }
+.mail-row:first-child { border-top: 0; }
+.mail-row b { font-size: 11.5px; font-weight: 500; color: rgba(238,243,242,.88); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mail-row span { font-size: 11px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mail-empty { font-size: 11px; color: var(--dim); padding: 10px 0; text-align: center; }
+
+/* 侧边滚动条：与邮箱列表同一套样式 */
+.sb::-webkit-scrollbar { width: 4px; }
+.sb::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.16); border-radius: 99px; }
+.sb::-webkit-scrollbar-track { background: transparent; }

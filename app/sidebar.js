@@ -4,6 +4,19 @@ const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
 
 /* ---------------- 高度自适应 ---------------- */
+let sbMaxH = 0;
+
+async function initSbMax() {
+  try {
+    const d = SHELL.display ? await SHELL.display() : null;
+    if (d && d.h) {
+      sbMaxH = Math.max(420, d.h - 80);       /* 留出上下边距，窗口 = 面板 + 40 */
+      document.documentElement.style.setProperty('--sb-max', sbMaxH + 'px');
+    }
+  } catch { /* 忽略 */ }
+}
+initSbMax();
+
 let hTimer = 0;
 function reportHeight() {
   clearTimeout(hTimer);
@@ -11,7 +24,7 @@ function reportHeight() {
     if (!SHELL.sidebarHeight) return;
     const sb = $('.sb');
     if (!sb) return;
-    const h = Math.ceil(sb.getBoundingClientRect().height) + 40;   /* 上下留 20px 外边距 */
+    const h = Math.ceil(Math.min(sb.getBoundingClientRect().height, sbMaxH || 99999)) + 40;
     SHELL.sidebarHeight(h);
   }, 60);
 }
@@ -154,20 +167,23 @@ async function toggleMemTop() {
   } catch { box.innerHTML = '<div class="mem-empty">读取失败</div>'; }
 }
 
+/* 内存行点击绑定（不放在播放/待办区块里，避免被后续改动连带删除） */
+$('#memRow')?.addEventListener('click', toggleMemTop);
+
 /* ---------------- 正在播放 ---------------- */
 const fmtT = (sec) => {
   const s = Math.max(0, sec | 0);
   return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
 };
-let lastMedia = null;
+
 async function loadMedia() {
   if (!SHELL.media) return;
+  const card = $('#mediaCard');
+  if (!card) return;
   try {
     const m = await SHELL.media();
-    const card = $('#mediaCard');
-    if (!m || !m.title) { card.hidden = true; lastMedia = null; return; }
+    if (!m || !m.title) { card.hidden = true; reportHeight(); return; }
     card.hidden = false;
-    lastMedia = m;
     $('#mTitle').textContent = m.title;
     $('#mArtist').textContent = m.artist || m.app || '';
     $('#mPos').textContent = fmtT(m.pos);
@@ -175,12 +191,12 @@ async function loadMedia() {
     $('#mBar').style.width = (m.dur ? Math.min(100, (m.pos / m.dur) * 100) : 0) + '%';
     $('#mPlay').textContent = m.playing ? '⏸' : '▶';
     document.body.classList.toggle('is-paused', !m.playing);
+    reportHeight();
   } catch { /* 忽略 */ }
 }
+
 loadMedia();
 setInterval(loadMedia, 3000);
-
-$('#memRow')?.addEventListener('click', toggleMemTop);
 
 $$('.m-ctl button').forEach((b) => {
   b.addEventListener('click', () => {
@@ -188,6 +204,61 @@ $$('.m-ctl button').forEach((b) => {
     setTimeout(loadMedia, 400);
   });
 });
+
+/* ---------------- 邮箱 ---------------- */
+const OTP_KEY = /(验证码|校验码|动态码|动态密码|确认码|激活码|安全码|登录码|绑定码|口令|验证|认证|verification\s*code|verify|passcode|\botp\b|\bcode\b)/i;
+const esc = (s) => String(s == null ? '' : s).replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
+
+function pickOtp(msg) {
+  if (!msg) return '';
+  const subject = String(msg.subject || '');
+  const from = String(msg.from || '');
+  if (!OTP_KEY.test(subject) && !OTP_KEY.test(from)) return '';
+  const hits = subject.match(/(?<!\d)(\d{4,8})(?!\d)/g) || [];
+  return hits.length ? hits[hits.length - 1] : '';
+}
+
+async function loadMail() {
+  if (!SHELL.mailStatus) return;
+  try {
+    const st = await SHELL.mailStatus();
+    const cache = (st && st.cache) || {};
+    const msgs = cache.messages || [];
+    const addrEl = $('#mailAddr');
+    if (addrEl) addrEl.textContent = (st && st.user) ? st.user : '未绑定';
+
+    let hit = null;
+    for (const mm of msgs) {
+      const c = pickOtp(mm);
+      if (c) { hit = { code: c, msg: mm }; break; }
+    }
+    const box = $('#otpBox');
+    if (box) {
+      box.hidden = !hit;
+      if (hit) {
+        $('#otpCode').textContent = hit.code;
+        $('#otpSrc').textContent = '来自 ' + (hit.msg.from || '邮件');
+      }
+    }
+
+    const list = $('#mailList');
+    if (list) {
+      if (cache.error) list.innerHTML = '<div class="mail-empty">收取失败：' + esc(cache.error) + '</div>';
+      else if (!msgs.length) list.innerHTML = '<div class="mail-empty">收件箱是空的</div>';
+      else {
+        list.innerHTML = msgs.slice(0, 4).map((mm) => (
+          '<div class="mail-row"><b>' + esc((mm.from || '').replace(/<.*?>/, '').trim()) + '</b>'
+          + '<span>' + esc(mm.subject || '(无主题)') + '</span></div>'
+        )).join('');
+      }
+    }
+    reportHeight();
+  } catch { /* 忽略 */ }
+}
+
+loadMail();
+setInterval(loadMail, 30000);
+if (SHELL.onMail) SHELL.onMail(() => loadMail());
 
 /* ---------------- 待办 ---------------- */
 const KEY = 'qfd.sidebar.todos';
@@ -261,7 +332,7 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-window.addEventListener('focus', () => { loadStats(); loadMedia(); });
+window.addEventListener('focus', () => { loadStats(); loadMail(); loadMedia(); });
 requestAnimationFrame(() => { document.body.classList.add('is-ready'); reportHeight(); });
 window.addEventListener('resize', reportHeight);
 new ResizeObserver(reportHeight).observe(document.querySelector('.sb'));

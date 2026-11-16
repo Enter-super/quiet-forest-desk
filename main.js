@@ -239,6 +239,11 @@ function cpuPercent() {
 
 const cache = { gpu: { t: 0, v: null }, vram: { t: 0, v: null }, net: { t: 0, v: 0 }, media: { t: 0, v: null } };
 
+ipcMain.handle('sys:display', async () => {
+  const d = screen.getPrimaryDisplay().workArea;
+  return { w: d.width, h: d.height };
+});
+
 ipcMain.handle('sys:stats', async () => {
   const total = os.totalmem(), free = os.freemem();
   const now = Date.now();
@@ -701,7 +706,9 @@ let mailTimer = null;
 let mailCache = { count: 0, messages: [], error: '' };
 
 function pushMail() {
-  if (win && !win.isDestroyed()) win.webContents.send('mail:update', mailCache);
+  for (const w of BrowserWindow.getAllWindows()) {
+    if (!w.isDestroyed()) { try { w.webContents.send('mail:update', mailCache); } catch { /* 忽略 */ } }
+  }
 }
 
 async function pollMail(silent = true) {

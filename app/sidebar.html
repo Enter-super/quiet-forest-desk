@@ -26,7 +26,10 @@
     <section class="card">
       <div class="card-t">系统</div>
       <div class="row"><span>CPU</span><i id="cpuCores">--</i><div class="bar"><b id="cpuBar"></b></div><em id="cpuVal">--</em></div>
-      <div class="row"><span>内存</span><i id="memInfo">--</i><div class="bar"><b id="memBar"></b></div><em id="memVal">--</em></div>
+      <div class="row is-clickable" id="memRow" title="点击查看各应用内存占用">
+        <span>内存 <b class="chev" id="memChev">▾</b></span><i id="memInfo">--</i><div class="bar"><b id="memBar"></b></div><em id="memVal">--</em>
+      </div>
+      <div class="mem-list" id="memList" hidden></div>
       <div class="row"><span>GPU</span><i></i><div class="bar"><b id="gpuBar"></b></div><em id="gpuVal">--</em></div>
       <div class="row"><span>显存</span><i id="vramInfo">--</i><div class="bar"><b id="vramBar"></b></div><em id="vramVal">--</em></div>
       <div class="row"><span>网络</span><i></i><div class="bar"><b id="netBar"></b></div><em id="netVal">--</em></div>
@@ -49,6 +52,15 @@
         <button data-act="playpause" class="m-play" id="mPlay" title="播放/暂停">⏸</button>
         <button data-act="next" title="下一首">⏭</button>
       </div>
+    </section>
+
+    <section class="card" id="mailCard">
+      <div class="card-t">邮箱<span class="mail-addr" id="mailAddr">未绑定</span></div>
+      <div class="otp-box" id="otpBox" hidden>
+        <span class="otp-code" id="otpCode">------</span>
+        <span class="otp-src" id="otpSrc"></span>
+      </div>
+      <div class="mail-list" id="mailList"><div class="mail-empty">读取中…</div></div>
     </section>
 
     <section class="card grow">
