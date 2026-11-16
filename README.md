@@ -53,6 +53,7 @@ app/icon.*        应用图标
 | CPU | `os.cpus()` 两次时间差 |
 | 内存 | `os.totalmem() - os.freemem()` |
 | GPU | `nvidia-smi --query-gpu=utilization.gpu` |
+| 显存 | 同上一条命令的 `memory.used,memory.total`（MiB） |
 | 网络 | `net.ps1`：`Get-NetAdapterStatistics` 接收字节增量 |
 | 正在播放 | `media.ps1`：WinRT `GlobalSystemMediaTransportControlsSessionManager` |
 | 待办 | `localStorage` |

@@ -70,6 +70,19 @@ async function loadStats() {
       $('#gpuBar').style.width = Math.max(2, s.gpu) + '%';
     }
 
+    if (s.vramTotal) {
+      const usedGB = s.vramUsed / 1024;
+      const totalGB = s.vramTotal / 1024;
+      const pct = Math.round((s.vramUsed / s.vramTotal) * 100);
+      $('#vramInfo').textContent = usedGB.toFixed(1) + ' / ' + totalGB.toFixed(0) + ' GB';
+      $('#vramVal').textContent = pct + '%';
+      $('#vramBar').style.width = Math.max(2, pct) + '%';
+    } else {
+      $('#vramInfo').textContent = '—';
+      $('#vramVal').textContent = '—';
+      $('#vramBar').style.width = '0%';
+    }
+
     const kb = s.netKb || 0;
     $('#netVal').textContent = kb >= 1024 ? (kb / 1024).toFixed(1) + ' MB/s' : kb.toFixed(0) + ' KB/s';
     $('#netBar').style.width = Math.min(100, Math.max(2, kb / 20)) + '%';

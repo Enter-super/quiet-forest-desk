@@ -187,7 +187,7 @@ function createSidebar() {
       if (!sbWin || sbWin.isDestroyed() || !sbWin.isVisible()) return;
       if (sbWin.isFocused()) return;
       sbWin.hide();
-    }, 350);
+    }, 1200);
     sbWin.once('focus', () => clearTimeout(t));
   });
   sbWin.on('closed', () => { sbWin = null; });
@@ -228,7 +228,7 @@ function cpuPercent() {
   return total > 0 ? Math.max(0, Math.min(100, Math.round((1 - idle / total) * 100))) : 0;
 }
 
-const cache = { gpu: { t: 0, v: null }, net: { t: 0, v: 0 }, media: { t: 0, v: null } };
+const cache = { gpu: { t: 0, v: null }, vram: { t: 0, v: null }, net: { t: 0, v: 0 }, media: { t: 0, v: null } };
 
 ipcMain.handle('sys:stats', async () => {
   const total = os.totalmem(), free = os.freemem();
@@ -236,9 +236,14 @@ ipcMain.handle('sys:stats', async () => {
 
   if (now - cache.gpu.t > 2500) {
     cache.gpu.t = now;
-    execFile('nvidia-smi', ['--query-gpu=utilization.gpu', '--format=csv,noheader,nounits'],
+    execFile('nvidia-smi', ['--query-gpu=utilization.gpu,memory.used,memory.total', '--format=csv,noheader,nounits'],
       { windowsHide: true, timeout: 4000 },
-      (err, out) => { cache.gpu.v = err ? null : (Number(String(out).trim().split('\n')[0]) || 0); });
+      (err, out) => {
+        if (err) { cache.gpu.v = null; cache.vram.v = null; return; }
+        const p = String(out).trim().split('\n')[0].split(',').map((x) => Number(String(x).trim()));
+        cache.gpu.v = Number.isFinite(p[0]) ? p[0] : null;
+        if (Number.isFinite(p[1]) && Number.isFinite(p[2])) cache.vram.v = { used: p[1], total: p[2] };
+      });
   }
   if (now - cache.net.t > 3000) {
     cache.net.t = now;
@@ -252,6 +257,8 @@ ipcMain.handle('sys:stats', async () => {
     memUsed: total - free,
     memTotal: total,
     gpu: cache.gpu.v,
+    vramUsed: cache.vram.v ? cache.vram.v.used : null,
+    vramTotal: cache.vram.v ? cache.vram.v.total : null,
     netKb: cache.net.v,
   };
 });
