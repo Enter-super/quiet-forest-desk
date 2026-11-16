@@ -3,6 +3,19 @@ const SHELL = window.desktopShell || {};
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
 
+/* ---------------- 高度自适应 ---------------- */
+let hTimer = 0;
+function reportHeight() {
+  clearTimeout(hTimer);
+  hTimer = setTimeout(() => {
+    if (!SHELL.sidebarHeight) return;
+    const sb = $('.sb');
+    if (!sb) return;
+    const h = Math.ceil(sb.getBoundingClientRect().height) + 40;   /* 上下留 20px 外边距 */
+    SHELL.sidebarHeight(h);
+  }, 60);
+}
+
 /* ---------------- 时钟 ---------------- */
 const WEEK = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
 function tickClock() {
@@ -54,6 +67,10 @@ async function loadStats() {
   try {
     const s = await SHELL.stats();
     if (!s) return;
+    if (s.memTotal) window.__memTotal = s.memTotal;
+    if (typeof memOpen !== 'undefined' && memOpen) {
+      try { renderMemTop((SHELL.memTop ? await SHELL.memTop() : []) || []); } catch { /* 忽略 */ }
+    }
     $('#cpuCores').textContent = s.cores + ' 核';
     $('#cpuVal').textContent = s.cpu + '%';
     $('#cpuBar').style.width = Math.max(2, s.cpu) + '%';
@@ -91,6 +108,52 @@ async function loadStats() {
 loadStats();
 setInterval(loadStats, 2000);
 
+/* ---------------- 内存占用下拉 ---------------- */
+var memOpen = false;   /* var：loadStats 在声明之前就会被调用 */
+
+function renderMemTop(list) {
+  const box = $('#memList');
+  if (!box) return;
+  if (!list.length) {
+    box.innerHTML = '<div class="mem-empty">读取失败</div>';
+    return;
+  }
+  const total = list.reduce((a, x) => Math.max(a, 0), 0); /* 占位，实际按物理内存算 */
+  const phys = (window.__memTotal || 0) || 1;
+  const max = list[0].ws || 1;
+  box.innerHTML = list.map((x) => {
+    const gb = x.ws / 1073741824;
+    const pct = phys > 1 ? (x.ws / phys) * 100 : 0;
+    const w = Math.max(3, Math.round((x.ws / max) * 100));
+    const nm = String(x.name || '').replace(/\.exe$/i, '');
+    return '<div class="mem-item">'
+      + '<span class="mi-name">' + nm.replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c])) + '</span>'
+      + '<span class="mi-val">' + gb.toFixed(2) + ' GB · ' + pct.toFixed(1) + '%</span>'
+      + '<i class="mi-bar"><b style="width:' + w + '%"></b></i>'
+      + '</div>';
+  }).join('');
+  reportHeight();
+}
+
+async function toggleMemTop() {
+  const box = $('#memList');
+  const chev = $('#memChev');
+  if (!box) return;
+  memOpen = !memOpen;
+  box.hidden = !memOpen;
+  if (chev) chev.classList.toggle('is-open', memOpen);
+  if (!memOpen) {
+    box.innerHTML = '';      /* 收起即清空，之后不再拉取各应用占用 */
+    reportHeight();
+    return;
+  }
+  box.innerHTML = '<div class="mem-empty">读取中…</div>';
+  try {
+    const list = (SHELL.memTop ? await SHELL.memTop() : []) || [];
+    renderMemTop(list);
+  } catch { box.innerHTML = '<div class="mem-empty">读取失败</div>'; }
+}
+
 /* ---------------- 正在播放 ---------------- */
 const fmtT = (sec) => {
   const s = Math.max(0, sec | 0);
@@ -116,6 +179,8 @@ async function loadMedia() {
 }
 loadMedia();
 setInterval(loadMedia, 3000);
+
+$('#memRow')?.addEventListener('click', toggleMemTop);
 
 $$('.m-ctl button').forEach((b) => {
   b.addEventListener('click', () => {
@@ -144,6 +209,7 @@ function renderTodos() {
     list.innerHTML = '<div class="todos-empty">' + (filter === 'done' ? '还没有完成的待办' : '今天还没有待办') + '</div>';
     return;
   }
+  reportHeight();
   list.innerHTML = view.map((t) => (
     '<div class="todo' + (t.done ? ' is-done' : '') + '" data-id="' + t.id + '">'
     + '<span class="dot" data-toggle="1"></span>'
@@ -196,4 +262,6 @@ document.addEventListener('keydown', (e) => {
 });
 
 window.addEventListener('focus', () => { loadStats(); loadMedia(); });
-requestAnimationFrame(() => document.body.classList.add('is-ready'));
+requestAnimationFrame(() => { document.body.classList.add('is-ready'); reportHeight(); });
+window.addEventListener('resize', reportHeight);
+new ResizeObserver(reportHeight).observe(document.querySelector('.sb'));

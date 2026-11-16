@@ -56,11 +56,16 @@ app/icon.*        应用图标
 | 显存 | 同上一条命令的 `memory.used,memory.total`（MiB） |
 | 网络 | `net.ps1`：`Get-NetAdapterStatistics` 接收字节增量 |
 | 正在播放 | `media.ps1`：WinRT `GlobalSystemMediaTransportControlsSessionManager` |
+| 内存明细 | `memtop.ps1`：`Get-Process` 按进程名合并 `WS`，展开时每 2 秒刷新 |
 | 待办 | `localStorage` |
 
 播放控制（上一首 / 暂停 / 下一首）由 `mediactl.ps1` 发系统媒体键 `VK_MEDIA_*`。
 
 > PowerShell 脚本开头都设了 `[Console]::OutputEncoding = UTF8`，否则中文标题经管道传到 Node 会变成乱码。
+
+点「内存」行可展开各应用的内存占用（占物理内存的百分比）；**收起时不会调用 `memtop.ps1`**，列表节点也会清空。
+
+窗口高度由内容决定：渲染进程用 `ResizeObserver` 测 `.sb` 高度，通过 `sidebar:height` 上报，主进程夹在 `420 ~ 工作区高度-40` 之间后 `setBounds`。
 
 窗口是 `transparent + 自绘渐变`；曾试过 `backgroundMaterial: 'acrylic'`，但它会把整个矩形窗口涂色，圆角外侧露出浅灰方块，因此去掉。
 

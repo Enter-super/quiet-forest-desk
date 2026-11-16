@@ -181,8 +181,15 @@ function createSidebar() {
   /* 召之即来的面板：必须压在最前面 */
   sbWin.setAlwaysOnTop(true, 'screen-saver');
   sbWin.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  sbWin.webContents.on('console-message', (_e, lvl, msg) => {
+    try { require('node:fs').appendFileSync(require('node:path').join(app.getPath('temp'), 'qfd-sb.log'), '[' + lvl + '] ' + msg + '\n'); } catch { }
+  });
+  sbWin.webContents.on('did-fail-load', (_e, c, d, u) => {
+    try { require('node:fs').appendFileSync(require('node:path').join(app.getPath('temp'), 'qfd-sb.log'), 'FAILLOAD ' + c + ' ' + d + ' ' + u + '\n'); } catch { }
+  });
   sbWin.loadFile(path.join(__dirname, 'app', 'sidebar.html'));
   sbWin.on('blur', () => {
+    if (process.env.QFD_NO_AUTOHIDE === '1') return;   /* 调试用：不自动收起 */
     const t = setTimeout(() => {
       if (!sbWin || sbWin.isDestroyed() || !sbWin.isVisible()) return;
       if (sbWin.isFocused()) return;
@@ -263,6 +270,15 @@ ipcMain.handle('sys:stats', async () => {
   };
 });
 
+ipcMain.handle('sys:memtop', async () => {
+  const raw = await runScript('memtop.ps1', [], 8000);
+  if (!raw) return [];
+  try {
+    const v = JSON.parse(raw);
+    return Array.isArray(v) ? v : [v];
+  } catch { return []; }
+});
+
 ipcMain.handle('sys:media', async () => {
   const now = Date.now();
   if (now - cache.media.t < 1500) return cache.media.v;
@@ -280,6 +296,16 @@ ipcMain.on('media:ctl', (_e, action) => {
   const a = ['playpause', 'next', 'prev', 'stop'].includes(action) ? action : 'playpause';
   runScript('mediactl.ps1', [a]);
   cache.media.t = 0;
+});
+
+ipcMain.on('sidebar:height', (_e, h) => {
+  if (!sbWin || sbWin.isDestroyed() || !sbWin.isVisible()) return;
+  const d = screen.getPrimaryDisplay().workArea;
+  const want = Math.max(420, Math.min(Math.round(Number(h) || 0), d.height - 40));
+  const b = sbWin.getBounds();
+  if (Math.abs(b.height - want) > 2) {
+    sbWin.setBounds({ x: b.x, y: b.y, width: b.width, height: want });
+  }
 });
 
 ipcMain.on('sidebar:close', () => { if (sbWin && !sbWin.isDestroyed()) sbWin.hide(); });
