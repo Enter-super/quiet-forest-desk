@@ -11,7 +11,7 @@ const {
 } = require('electron');
 const path = require('node:path');
 const os = require('node:os');
-const { execFile } = require('node:child_process');
+const { execFile, spawn } = require('node:child_process');
 
 let win = null;
 let tray = null;
@@ -194,6 +194,7 @@ function createSidebar() {
       if (!sbWin || sbWin.isDestroyed() || !sbWin.isVisible()) return;
       if (sbWin.isFocused()) return;
       sbWin.hide();
+      stopClickHook();
     }, 1200);
     sbWin.once('focus', () => clearTimeout(t));
   });
@@ -202,10 +203,11 @@ function createSidebar() {
 
 function toggleSidebar() {
   if (!sbWin || sbWin.isDestroyed()) createSidebar();
-  if (sbWin.isVisible()) { sbWin.hide(); return; }
+  if (sbWin.isVisible()) { sbWin.hide(); stopClickHook(); return; }
   sbWin.setBounds(sidebarBounds());
   sbWin.show();
   sbWin.focus();
+  startClickHook();
 }
 
 /* ---- 指标采集 ---- */
@@ -308,7 +310,50 @@ ipcMain.on('sidebar:height', (_e, h) => {
   }
 });
 
-ipcMain.on('sidebar:close', () => { if (sbWin && !sbWin.isDestroyed()) sbWin.hide(); });
+/* ---- 点击面板外部自动收起：全局鼠标钩子（只在面板显示期间运行） ---- */
+let clickProc = null;
+let clickBuf = '';
+
+function handleOutsideClick(px, py) {
+  if (!sbWin || sbWin.isDestroyed() || !sbWin.isVisible()) return;
+  let dip;
+  try { dip = screen.screenToDipPoint({ x: px, y: py }); } catch { dip = { x: px, y: py }; }
+  const b = sbWin.getBounds();
+  const inside = dip.x >= b.x && dip.x <= b.x + b.width && dip.y >= b.y && dip.y <= b.y + b.height;
+  if (!inside) { sbWin.hide(); stopClickHook(); }
+}
+
+function startClickHook() {
+  if (clickProc) return;
+  try {
+    clickProc = spawn('powershell.exe',
+      ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', path.join(__dirname, 'clickhook.ps1')],
+      { windowsHide: true });
+    clickBuf = '';
+    const t0 = Date.now();
+    clickProc.stdout.on('data', (buf) => {
+      clickBuf += buf.toString('utf8');
+      let i;
+      while ((i = clickBuf.indexOf('\n')) >= 0) {
+        const line = clickBuf.slice(0, i).trim();
+        clickBuf = clickBuf.slice(i + 1);
+        if (!/^-?\d+,-?\d+$/.test(line)) continue;
+        if (Date.now() - t0 < 350) continue;      /* 忽略呼出瞬间的抖动 */
+        const [px, py] = line.split(',').map(Number);
+        handleOutsideClick(px, py);
+      }
+    });
+    clickProc.on('exit', () => { clickProc = null; });
+  } catch { clickProc = null; }
+}
+
+function stopClickHook() {
+  if (!clickProc) return;
+  try { clickProc.kill(); } catch { /* 忽略 */ }
+  clickProc = null;
+}
+
+ipcMain.on('sidebar:close', () => { if (sbWin && !sbWin.isDestroyed()) { sbWin.hide(); stopClickHook(); } });
 
 function createTray() {
   const icon = nativeImage.createFromPath(path.join(__dirname, 'app', 'icon.ico'));
@@ -546,7 +591,7 @@ ipcMain.handle('sys:paths', async () => ({ home: app.getPath('home'), downloads:
 
 /* 控制中心：网络状态 + 音量/亮度 */
 ipcMain.handle('sys:net', async () => {
-  const { execFile } = require('node:child_process');
+  const { execFile, spawn } = require('node:child_process');
   return new Promise((resolve) => {
     execFile('netsh', ['wlan', 'show', 'interfaces'], { windowsHide: true, timeout: 3000 }, (err, stdout) => {
       if (err || !stdout) { resolve({ ssid: '' }); return; }
@@ -562,7 +607,7 @@ let volLevel = 50;
 function runPs(cmd, timeout = 8000) {
   return new Promise((resolve) => {
     try {
-      const { execFile } = require('node:child_process');
+      const { execFile, spawn } = require('node:child_process');
       execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', cmd],
         { windowsHide: true, timeout }, (err, stdout, stderr) => {
           resolve({ ok: !err, out: (stdout || '').trim(), err: err ? String(stderr || err.message).trim() : '' });
@@ -596,7 +641,7 @@ ipcMain.on('sys:level', async (_e, kind, value) => {
     const scriptPath = require('node:path').join(__dirname, 'vol.ps1');
     const r = await new Promise((resolve) => {
       try {
-        const { execFile } = require('node:child_process');
+        const { execFile, spawn } = require('node:child_process');
         execFile('powershell.exe',
           ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', scriptPath, steps > 0 ? 'up' : 'down', String(Math.abs(steps))],
           { windowsHide: true, timeout: 8000 },

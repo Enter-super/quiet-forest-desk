@@ -65,6 +65,14 @@ app/icon.*        应用图标
 
 点「内存」行可展开各应用的内存占用（占物理内存的百分比）；**收起时不会调用 `memtop.ps1`**，列表节点也会清空。
 
+收起方式有三种：**Esc**、**失焦 1.2 秒**、**点击面板以外的任何地方**。
+
+第三种靠 `clickhook.ps1`：一个 Win32 低级鼠标钩子（`WH_MOUSE_LL` + `Application.Run()` 消息循环），
+只在面板显示期间由主进程启动，逐行输出点击的**物理像素**坐标；
+主进程用 `screen.screenToDipPoint()` 换算成 DIP 后与 `getBounds()` 比较，落在面板外就收起并 kill 掉钩子进程。
+
+> 桌面覆盖层是 `WS_EX_NOACTIVATE`，点桌面不会让它失焦，所以单靠 `blur` 收不起来——这是必须用钩子的原因。
+
 窗口高度由内容决定：渲染进程用 `ResizeObserver` 测 `.sb` 高度，通过 `sidebar:height` 上报，主进程夹在 `420 ~ 工作区高度-40` 之间后 `setBounds`。
 
 窗口是 `transparent + 自绘渐变`；曾试过 `backgroundMaterial: 'acrylic'`，但它会把整个矩形窗口涂色，圆角外侧露出浅灰方块，因此去掉。
