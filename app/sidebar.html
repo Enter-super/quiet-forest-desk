@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>静林 · 侧边栏</title>
+<link rel="stylesheet" href="sidebar.css" />
+</head>
+<body>
+  <div class="sb" id="sb">
+    <header class="sb-head">
+      <span class="sb-logo"><i></i>静林</span>
+      <span class="sb-hint">ALT + Q</span>
+      <span class="sb-wx"><b id="wxIco">☁</b><i id="wxTxt">--°</i></span>
+    </header>
+
+    <section class="sb-clock">
+      <div class="c-date" id="cDate">11月15日星期日</div>
+      <div class="c-time" id="cTime">12:15</div>
+      <div class="c-wx">
+        <span class="wx-now" id="wxNow">--°</span>
+        <div class="wx-meta"><b id="wxDesc">局部多云</b><i id="wxCity">深圳 高--° 低--°</i></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-t">系统</div>
+      <div class="row"><span>CPU</span><i id="cpuCores">--</i><div class="bar"><b id="cpuBar"></b></div><em id="cpuVal">--</em></div>
+      <div class="row"><span>内存</span><i id="memInfo">--</i><div class="bar"><b id="memBar"></b></div><em id="memVal">--</em></div>
+      <div class="row"><span>GPU</span><i></i><div class="bar"><b id="gpuBar"></b></div><em id="gpuVal">--</em></div>
+      <div class="row"><span>网络</span><i></i><div class="bar"><b id="netBar"></b></div><em id="netVal">--</em></div>
+    </section>
+
+    <section class="card" id="mediaCard" hidden>
+      <div class="card-t">正在播放</div>
+      <div class="media">
+        <div class="cover" id="mCover"></div>
+        <div class="m-meta">
+          <b id="mTitle">--</b>
+          <i id="mArtist">--</i>
+        </div>
+        <span class="m-bars"><b></b><b></b><b></b></span>
+      </div>
+      <div class="m-prog"><b id="mBar"></b></div>
+      <div class="m-time"><span id="mPos">0:00</span><span id="mDur">0:00</span></div>
+      <div class="m-ctl">
+        <button data-act="prev" title="上一首">⏮</button>
+        <button data-act="playpause" class="m-play" id="mPlay" title="播放/暂停">⏸</button>
+        <button data-act="next" title="下一首">⏭</button>
+      </div>
+    </section>
+
+    <section class="card grow">
+      <div class="card-t">今天
+        <div class="tabs">
+          <button class="tab is-on" data-filter="open">未完成 <i id="nOpen">0</i></button>
+          <button class="tab" data-filter="done">已完成 <i id="nDone">0</i></button>
+          <button class="tab" data-filter="all">全部 <i id="nAll">0</i></button>
+        </div>
+      </div>
+      <div class="todos" id="todos"></div>
+      <div class="todo-add">
+        <span>＋</span><input id="todoInput" placeholder="添加待办" maxlength="60" />
+      </div>
+    </section>
+
+    <footer class="sb-foot">Esc 收起</footer>
+  </div>
+  <script src="sidebar.js"></script>
+</body>
+</html>

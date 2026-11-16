@@ -1,7 +1,7 @@
 {
   "name": "quiet-forest-desk",
   "productName": "静林桌面",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Windows 桌面部件壳：灵动岛胶囊 + Nexus 风格 Dock + 控制中心（Electron）",
   "main": "main.js",
   "author": "QuietForest",
@@ -22,6 +22,9 @@
       "preload.js",
       "mailer.js",
       "vol.ps1",
+      "media.ps1",
+      "mediactl.ps1",
+      "net.ps1",
       "app/**/*",
       "package.json"
     ],

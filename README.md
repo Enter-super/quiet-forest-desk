@@ -42,6 +42,27 @@ app/styles.css    全部样式
 app/icon.*        应用图标
 ```
 
+## 侧边栏（Alt + Q）
+
+全局快捷键 `Alt + Q`（`globalShortcut`）呼出屏幕右侧的液态玻璃面板，再次按下或 Esc 收起。
+
+| 模块 | 数据来源 |
+|---|---|
+| 时钟 / 日期 | 本地时间 |
+| 天气 | `https://wttr.in/?format=j1&lang=zh` + 中文描述词典 |
+| CPU | `os.cpus()` 两次时间差 |
+| 内存 | `os.totalmem() - os.freemem()` |
+| GPU | `nvidia-smi --query-gpu=utilization.gpu` |
+| 网络 | `net.ps1`：`Get-NetAdapterStatistics` 接收字节增量 |
+| 正在播放 | `media.ps1`：WinRT `GlobalSystemMediaTransportControlsSessionManager` |
+| 待办 | `localStorage` |
+
+播放控制（上一首 / 暂停 / 下一首）由 `mediactl.ps1` 发系统媒体键 `VK_MEDIA_*`。
+
+> PowerShell 脚本开头都设了 `[Console]::OutputEncoding = UTF8`，否则中文标题经管道传到 Node 会变成乱码。
+
+窗口是 `transparent + 自绘渐变`；曾试过 `backgroundMaterial: 'acrylic'`，但它会把整个矩形窗口涂色，圆角外侧露出浅灰方块，因此去掉。
+
 ## 鼠标穿透是怎么做的
 
 整屏覆盖层默认 `setIgnoreMouseEvents(true)`，鼠标事件直接落到桌面；

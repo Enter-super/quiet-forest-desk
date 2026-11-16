@@ -58,6 +58,10 @@ contextBridge.exposeInMainWorld('desktopShell', {
 
   netInfo() { return ipcRenderer.invoke('sys:net'); },
   setLevel(kind, value) { ipcRenderer.send('sys:level', kind, value); },
+  stats() { return ipcRenderer.invoke('sys:stats'); },
+  media() { return ipcRenderer.invoke('sys:media'); },
+  mediaCtl(action) { ipcRenderer.send('media:ctl', action); },
+  closeSidebar() { ipcRenderer.send('sidebar:close'); },
   getLevel() { return ipcRenderer.invoke('sys:getLevel'); },
   pickApps() { return ipcRenderer.invoke('dialog:pickApps'); },
   capsuleSize(open) { ipcRenderer.send('capsule:size', !!open); },

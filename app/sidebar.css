@@ -1,0 +1,150 @@
+:root {
+  --glass-strong: rgba(20, 25, 27, 0.58);
+  --glass-soft: rgba(34, 41, 43, 0.62);
+  --glass-hair: rgba(255, 255, 255, 0.14);
+  --ink: #eef3f2;
+  --dim: rgba(238, 243, 242, 0.52);
+  --mint: #8fe3c4;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%; height: 100%;
+  background: transparent;
+  overflow: hidden;
+  font-family: "Segoe UI Variable Display", "Segoe UI", "Microsoft YaHei UI", system-ui, sans-serif;
+  color: var(--ink);
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.sb {
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column; gap: 12px;
+  padding: 18px 16px 14px;
+  border-radius: 26px;
+  background:
+    radial-gradient(120% 90% at 8% 0%, rgba(126, 168, 160, 0.20), transparent 60%),
+    radial-gradient(120% 90% at 100% 100%, rgba(96, 118, 140, 0.18), transparent 62%),
+    linear-gradient(165deg, rgba(24, 29, 31, 0.955), rgba(11, 15, 17, 0.975));
+  backdrop-filter: blur(42px) saturate(165%);
+  -webkit-backdrop-filter: blur(42px) saturate(165%);
+  border: 1px solid var(--glass-hair);
+  box-shadow: 0 34px 90px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.10);
+  opacity: 0; transform: translateX(18px) scale(0.985);
+  transition: opacity 240ms cubic-bezier(.2,.8,.2,1), transform 320ms cubic-bezier(.2,.8,.2,1);
+}
+body.is-ready .sb { opacity: 1; transform: translateX(0) scale(1); }
+
+/* 头部 */
+.sb-head { display: flex; align-items: center; gap: 10px; padding: 2px 4px 0; }
+.sb-logo { display: flex; align-items: center; gap: 7px; font-size: 15px; font-weight: 600; letter-spacing: .5px; }
+.sb-logo i { width: 14px; height: 14px; border-radius: 50%; background: conic-gradient(from 200deg, #9fe3cf, #6f9fd8, #9fe3cf); }
+.sb-hint {
+  margin-left: auto; font-size: 10.5px; letter-spacing: .8px; color: var(--dim);
+  padding: 3px 8px; border-radius: 8px; border: 1px solid var(--glass-hair); background: rgba(255,255,255,.04);
+}
+.sb-wx { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--dim); }
+.sb-wx b { font-weight: 500; }
+
+/* 时钟 */
+.sb-clock { padding: 4px 6px 2px; }
+.c-date { font-size: 12px; color: var(--dim); letter-spacing: .4px; }
+.c-time { font-size: 54px; font-weight: 600; line-height: 1.02; letter-spacing: -1.5px;
+  font-variant-numeric: tabular-nums; margin: 2px 0 6px; }
+.c-wx { display: flex; align-items: center; gap: 12px; }
+.wx-now { font-size: 21px; font-weight: 600; }
+.wx-meta { display: flex; flex-direction: column; }
+.wx-meta b { font-size: 12.5px; font-weight: 500; }
+.wx-meta i { font-size: 11.5px; font-style: normal; color: var(--dim); }
+
+/* 卡片 */
+.card {
+  padding: 13px 14px; border-radius: 18px;
+  background: var(--glass-soft);
+  border: 1px solid var(--glass-hair);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+}
+.card.grow { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
+.card-t { display: flex; align-items: center; font-size: 12px; color: var(--dim); margin-bottom: 10px; letter-spacing: .3px; }
+
+/* 系统行 */
+.row {
+  display: grid; grid-template-columns: 1fr auto auto;
+  align-items: baseline; gap: 4px 10px; padding: 7px 0 5px;
+}
+.row > span { grid-row: 1; grid-column: 1; font-size: 12px; color: rgba(238,243,242,.86); }
+.row > i { grid-row: 1; grid-column: 2; font-size: 11px; font-style: normal; color: var(--dim); white-space: nowrap; text-align: right; }
+.row > em { grid-row: 1; grid-column: 3; font-size: 12px; font-style: normal; text-align: right; font-variant-numeric: tabular-nums; min-width: 42px; }
+.bar { grid-row: 2; grid-column: 1 / -1; height: 4px; margin-top: 5px; border-radius: 99px; background: rgba(255,255,255,.09); overflow: hidden; }
+.bar > b { display: block; height: 100%; width: 0%; border-radius: 99px;
+  background: linear-gradient(90deg, #7fdfc0, #9fd6ff); transition: width 520ms cubic-bezier(.2,.8,.2,1); }
+
+/* 播放 */
+.media { display: flex; align-items: center; gap: 11px; }
+.cover { width: 44px; height: 44px; border-radius: 11px; flex: 0 0 auto;
+  background: linear-gradient(140deg, #6ea7c9, #7f7fc4 55%, #3c4a6b); box-shadow: 0 6px 18px rgba(0,0,0,.35); }
+.m-meta { display: flex; flex-direction: column; min-width: 0; flex: 1 1 auto; }
+.m-meta b { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.m-meta i { font-size: 11.5px; font-style: normal; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.m-bars { display: flex; align-items: flex-end; gap: 2px; height: 14px; }
+.m-bars b { width: 3px; border-radius: 2px; background: var(--mint); animation: eq 900ms ease-in-out infinite; }
+.m-bars b:nth-child(1) { height: 8px; animation-delay: -200ms; }
+.m-bars b:nth-child(2) { height: 14px; animation-delay: -500ms; }
+.m-bars b:nth-child(3) { height: 10px; animation-delay: -80ms; }
+@keyframes eq { 0%,100% { transform: scaleY(.45); } 50% { transform: scaleY(1); } }
+body.is-paused .m-bars b { animation: none; transform: scaleY(.4); }
+
+.m-prog { margin-top: 12px; height: 4px; border-radius: 99px; background: rgba(255,255,255,.10); overflow: hidden; }
+.m-prog b { display: block; height: 100%; width: 0%; border-radius: 99px; background: var(--mint); transition: width 300ms linear; }
+.m-time { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--dim); margin-top: 5px; font-variant-numeric: tabular-nums; }
+.m-ctl { display: flex; align-items: center; justify-content: center; gap: 18px; margin-top: 10px; }
+.m-ctl button {
+  width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--glass-hair);
+  background: rgba(255,255,255,.05); color: var(--ink); font-size: 12px; cursor: pointer;
+  display: grid; place-items: center; transition: background 160ms, transform 160ms;
+}
+.m-ctl button:hover { background: rgba(255,255,255,.12); }
+.m-ctl button:active { transform: scale(.94); }
+.m-ctl .m-play { width: 38px; height: 38px; font-size: 14px; background: rgba(255,255,255,.14); }
+
+/* 待办 */
+.tabs { margin-left: auto; display: flex; gap: 4px; }
+.tab {
+  font-size: 11px; color: var(--dim); border: 0; background: transparent; cursor: pointer;
+  padding: 4px 8px; border-radius: 9px; display: flex; align-items: center; gap: 4px;
+}
+.tab i { font-style: normal; font-size: 10px; opacity: .8; }
+.tab.is-on { background: rgba(255,255,255,.12); color: var(--ink); }
+.tab:hover { color: var(--ink); }
+
+.todos { flex: 1 1 auto; overflow-y: auto; min-height: 0; display: flex; flex-direction: column; gap: 2px; }
+.todos::-webkit-scrollbar { width: 4px; }
+.todos::-webkit-scrollbar-thumb { background: rgba(255,255,255,.16); border-radius: 99px; }
+.todo {
+  display: flex; align-items: center; gap: 10px; padding: 9px 6px; border-radius: 10px;
+  font-size: 12.5px; transition: background 160ms;
+}
+.todo:hover { background: rgba(255,255,255,.05); }
+.todo .dot {
+  width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,.34);
+  flex: 0 0 auto; cursor: pointer; transition: border-color 160ms, background 160ms;
+}
+.todo.is-done .dot { background: var(--mint); border-color: var(--mint); }
+.todo.is-done .txt { color: var(--dim); text-decoration: line-through; }
+.todo .txt { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.todo .del { opacity: 0; border: 0; background: transparent; color: var(--dim); cursor: pointer; font-size: 13px; }
+.todo:hover .del { opacity: 1; }
+.todos-empty { color: var(--dim); font-size: 12px; padding: 18px 4px; text-align: center; }
+
+.todo-add { display: flex; align-items: center; gap: 8px; margin-top: 8px; padding: 8px 10px;
+  border-radius: 12px; border: 1px solid var(--glass-hair); background: rgba(255,255,255,.04); }
+.todo-add span { color: var(--dim); font-size: 14px; }
+.todo-add input {
+  flex: 1 1 auto; border: 0; outline: 0; background: transparent; color: var(--ink);
+  font-size: 12.5px; font-family: inherit;
+}
+.todo-add input::placeholder { color: rgba(238,243,242,.34); }
+
+.sb-foot { text-align: center; font-size: 10.5px; color: rgba(238,243,242,.32); letter-spacing: .3px; }

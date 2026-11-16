@@ -7,9 +7,11 @@
  */
 
 const {
-  app, BrowserWindow, screen, Tray, Menu, ipcMain, shell, nativeImage,
+  app, BrowserWindow, screen, Tray, Menu, ipcMain, shell, nativeImage, globalShortcut,
 } = require('electron');
 const path = require('node:path');
+const os = require('node:os');
+const { execFile } = require('node:child_process');
 
 let win = null;
 let tray = null;
@@ -144,6 +146,136 @@ function buildTrayMenu() {
     { label: '退出', click: () => app.quit() },
   ]);
 }
+
+/* ---------------------------------------------------------------- 侧边栏（Alt+Q）
+   一个贴在屏幕右侧的液态玻璃面板：时钟 / 天气 / 系统 / 正在播放 / 待办。
+   属于"召之即来"的面板，所以置顶；失焦或 Esc 自动收起。 */
+let sbWin = null;
+
+function sidebarBounds() {
+  const d = screen.getPrimaryDisplay().workArea;
+  const w = 400;
+  const h = Math.min(980, d.height - 40);
+  return { x: d.x + d.width - w - 20, y: d.y + 20, width: w, height: h };
+}
+
+function createSidebar() {
+  if (sbWin && !sbWin.isDestroyed()) return;
+  sbWin = new BrowserWindow({
+    ...sidebarBounds(),
+    frame: false,
+    transparent: true,
+    backgroundColor: '#00000000',
+    hasShadow: false,
+    resizable: false,
+    skipTaskbar: true,
+    show: false,
+    title: '静林 · 侧边栏',
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+  /* 召之即来的面板：必须压在最前面 */
+  sbWin.setAlwaysOnTop(true, 'screen-saver');
+  sbWin.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  sbWin.loadFile(path.join(__dirname, 'app', 'sidebar.html'));
+  sbWin.on('blur', () => {
+    const t = setTimeout(() => {
+      if (!sbWin || sbWin.isDestroyed() || !sbWin.isVisible()) return;
+      if (sbWin.isFocused()) return;
+      sbWin.hide();
+    }, 350);
+    sbWin.once('focus', () => clearTimeout(t));
+  });
+  sbWin.on('closed', () => { sbWin = null; });
+}
+
+function toggleSidebar() {
+  if (!sbWin || sbWin.isDestroyed()) createSidebar();
+  if (sbWin.isVisible()) { sbWin.hide(); return; }
+  sbWin.setBounds(sidebarBounds());
+  sbWin.show();
+  sbWin.focus();
+}
+
+/* ---- 指标采集 ---- */
+function runScript(file, args = [], timeout = 6000) {
+  return new Promise((resolve) => {
+    try {
+      execFile('powershell.exe',
+        ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', path.join(__dirname, file), ...args],
+        { windowsHide: true, timeout },
+        (err, stdout) => resolve(err ? null : String(stdout || '').trim()));
+    } catch { resolve(null); }
+  });
+}
+
+let cpuPrev = null;
+function cpuPercent() {
+  const now = os.cpus().map((c) => c.times);
+  if (!cpuPrev) { cpuPrev = now; return 0; }
+  let idle = 0, total = 0;
+  for (let i = 0; i < now.length; i++) {
+    const a = cpuPrev[i] || now[i], b = now[i];
+    const di = b.idle - a.idle;
+    const dt = (b.user + b.nice + b.sys + b.idle + b.irq) - (a.user + a.nice + a.sys + a.idle + a.irq);
+    idle += di; total += dt;
+  }
+  cpuPrev = now;
+  return total > 0 ? Math.max(0, Math.min(100, Math.round((1 - idle / total) * 100))) : 0;
+}
+
+const cache = { gpu: { t: 0, v: null }, net: { t: 0, v: 0 }, media: { t: 0, v: null } };
+
+ipcMain.handle('sys:stats', async () => {
+  const total = os.totalmem(), free = os.freemem();
+  const now = Date.now();
+
+  if (now - cache.gpu.t > 2500) {
+    cache.gpu.t = now;
+    execFile('nvidia-smi', ['--query-gpu=utilization.gpu', '--format=csv,noheader,nounits'],
+      { windowsHide: true, timeout: 4000 },
+      (err, out) => { cache.gpu.v = err ? null : (Number(String(out).trim().split('\n')[0]) || 0); });
+  }
+  if (now - cache.net.t > 3000) {
+    cache.net.t = now;
+    runScript('net.ps1').then((v) => { const n = Number(v); if (Number.isFinite(n)) cache.net.v = n; });
+  }
+
+  return {
+    cores: os.cpus().length,
+    cpu: cpuPercent(),
+    memPct: Math.round(((total - free) / total) * 100),
+    memUsed: total - free,
+    memTotal: total,
+    gpu: cache.gpu.v,
+    netKb: cache.net.v,
+  };
+});
+
+ipcMain.handle('sys:media', async () => {
+  const now = Date.now();
+  if (now - cache.media.t < 1500) return cache.media.v;
+  cache.media.t = now;
+  const raw = await runScript('media.ps1');
+  if (!raw || raw === '{}') { cache.media.v = null; return null; }
+  try {
+    const o = JSON.parse(raw);
+    cache.media.v = o && o.title ? o : null;
+  } catch { cache.media.v = null; }
+  return cache.media.v;
+});
+
+ipcMain.on('media:ctl', (_e, action) => {
+  const a = ['playpause', 'next', 'prev', 'stop'].includes(action) ? action : 'playpause';
+  runScript('mediactl.ps1', [a]);
+  cache.media.t = 0;
+});
+
+ipcMain.on('sidebar:close', () => { if (sbWin && !sbWin.isDestroyed()) sbWin.hide(); });
 
 function createTray() {
   const icon = nativeImage.createFromPath(path.join(__dirname, 'app', 'icon.ico'));
@@ -559,6 +691,8 @@ app.on('second-instance', () => {
 
 app.whenReady().then(() => {
   createOverlay();
+  createSidebar();
+  globalShortcut.register('Alt+Q', toggleSidebar);
   startZOrderKeeper();
   startMailPoll();
   createTray();
@@ -567,6 +701,7 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => app.quit());
+app.on('will-quit', () => { globalShortcut.unregisterAll(); });
 app.on('before-quit', () => {
   stopZOrderKeeper();
   if (cursorTimer) { clearInterval(cursorTimer); cursorTimer = null; }
