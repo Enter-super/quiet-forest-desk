@@ -49,29 +49,73 @@ const WX_ZH = {
   'patchy light rain with thunder': '雷阵雨', 'moderate or heavy rain with thunder': '雷雨',
   'light rain shower': '阵雨', 'moderate or heavy rain shower': '强阵雨', 'patchy light drizzle': '零星小雨',
 };
-const wxZh = (s) => WX_ZH[String(s || '').toLowerCase()] || s || '—';
+const wxZh = (s) => { const k = String(s || '').trim().toLowerCase(); return WX_ZH[k] || String(s || '').trim() || '—'; };
+
+/* 城市：IP 定位会被代理带偏（走 Clash 就变成海外城市），
+   所以允许手动指定，存 localStorage，两个窗口共用。 */
+function getCity() {
+  try { return (localStorage.getItem('qfd.city') || '').trim(); } catch { return ''; }
+}
+
+function weatherUrl() {
+  const c = getCity();
+  return c
+    ? 'https://wttr.in/' + encodeURIComponent(c) + '?format=j1&lang=zh'
+    : 'https://wttr.in/?format=j1&lang=zh';
+}
 
 async function loadWeather() {
   try {
-    const r = await fetch('https://wttr.in/?format=j1&lang=zh', { cache: 'no-store' });
+    const r = await fetch(weatherUrl(), { cache: 'no-store' });
     const j = await r.json();
     const cur = (j.current_condition || [])[0] || {};
     const t = (j.weather || [])[0] || {};
     const now = Number(cur.temp_C);
     const desc = wxZh((cur.weatherDesc && cur.weatherDesc[0] && cur.weatherDesc[0].value) || '');
     const area = (j.nearest_area && j.nearest_area[0]) || {};
-    const city = (area.lang_zh && area.lang_zh[0] && area.lang_zh[0].value)
+    const autoCity = (area.lang_zh && area.lang_zh[0] && area.lang_zh[0].value)
       || (area.areaName && area.areaName[0] && area.areaName[0].value) || '本地';
+    const city = getCity() || autoCity;
     if (Number.isFinite(now)) {
       $('#wxTxt').textContent = now + '°';
       $('#wxNow').textContent = now + '°';
       $('#wxDesc').textContent = desc;
-      $('#wxCity').textContent = city + ' 高' + t.maxtempC + '° 低' + t.mintempC + '°';
+      const manual = getCity();
+      $('#wxCity').textContent = city + ' 高' + t.maxtempC + '° 低' + t.mintempC + '°' + (manual ? '' : ' · 点此设置');
     }
   } catch { /* 保留占位 */ }
 }
 loadWeather();
 setInterval(loadWeather, 20 * 60 * 1000);
+
+/* 点击城市名 → 就地输入（不改变布局，输入框与原文字同尺寸） */
+$('#wxCity')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  const el = e.currentTarget;
+  if (el.querySelector('input')) return;
+  const old = getCity();
+  el.innerHTML = '<input class="city-input" maxlength="16" placeholder="城市，如 深圳" aria-label="设置天气城市" />';
+  const inp = el.querySelector('input');
+  inp.value = old;
+  inp.focus();
+  inp.select();
+  const commit = (save) => {
+    if (save) {
+      const v = inp.value.trim();
+      try {
+        if (v) localStorage.setItem('qfd.city', v);
+        else localStorage.removeItem('qfd.city');
+      } catch { /* 忽略 */ }
+    }
+    el.textContent = '';
+    loadWeather();
+  };
+  inp.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Enter') { ev.preventDefault(); commit(true); }
+    else if (ev.key === 'Escape') { ev.preventDefault(); commit(false); }
+  });
+  inp.addEventListener('blur', () => commit(false), { once: true });
+});
 
 /* ---------------- 系统指标 ---------------- */
 const fmtGB = (b) => (b / 1073741824).toFixed(1) + ' GB';

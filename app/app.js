@@ -328,7 +328,12 @@
     const note = $('#weatherNote');
     note.textContent = '正在读取…';
     try {
-      const res = await fetch('https://wttr.in/?format=j1', { mode: 'cors', cache: 'no-store' });
+      let city = '';
+      try { city = (localStorage.getItem('qfd.city') || '').trim(); } catch { /* 忽略 */ }
+      const url = city
+        ? 'https://wttr.in/' + encodeURIComponent(city) + '?format=j1&lang=zh'
+        : 'https://wttr.in/?format=j1';
+      const res = await fetch(url, { mode: 'cors', cache: 'no-store' });
       if (!res.ok) throw new Error(res.status);
       const j = await res.json();
       const cur = j.current_condition?.[0] || {};

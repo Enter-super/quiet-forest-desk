@@ -512,6 +512,16 @@ ipcMain.handle('shell:icon', async (_e, target) => {
 });
 
 /* 右键菜单：按"资源管理器里右键"的语义给 */
+function resolveRealPath(target) {
+  try {
+    if (/\.lnk$/i.test(target)) {
+      const lnk = shell.readShortcutLink(target);
+      if (lnk.target && fsx.existsSync(lnk.target)) return lnk.target;
+    }
+  } catch { /* 解析失败就用原路径 */ }
+  return target;
+}
+
 ipcMain.handle('shell:menu', async (_e, target) => {
   return new Promise((resolve) => {
     if (!target) { resolve(null); return; }
@@ -524,13 +534,13 @@ ipcMain.handle('shell:menu', async (_e, target) => {
           const { spawn } = require('node:child_process');
           try {
             spawn('powershell.exe',
-              ['-NoProfile', '-Command', `Start-Process -FilePath "${target.replace(/"/g, '""')}" -Verb RunAs`],
+              ['-NoProfile', '-Command', `Start-Process -FilePath "${resolveRealPath(target).replace(/"/g, '""')}" -Verb RunAs`],
               { detached: true, stdio: 'ignore', windowsHide: true }).unref();
           } catch { /* 用户取消 UAC 就算了 */ }
         },
       },
       { type: 'separator' },
-      { label: '打开文件所在位置', click: () => shell.showItemInFolder(target) },
+      { label: '打开文件所在位置', click: () => shell.showItemInFolder(resolveRealPath(target)) },
       {
         label: '属性',
         click: () => {

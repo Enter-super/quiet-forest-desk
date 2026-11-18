@@ -1939,3 +1939,10 @@ html { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; 
     inset 0 1px 0 rgba(255, 255, 255, .22),
     inset 0 0 0 1px rgba(255, 255, 255, .08);
 }
+
+/* 时钟：星期文字居中压在时间上方（原来 right:-0.16em 偏右，整块看起来向右甩） */
+.clock-script {
+  right: auto;
+  left: 50%;
+  transform: translateX(-50%) rotate(-3.5deg);
+}
