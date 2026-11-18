@@ -12,6 +12,8 @@ const {
 const path = require('node:path');
 const os = require('node:os');
 const { execFile, spawn } = require('node:child_process');
+const fsx = require('node:fs');
+const crypto = require('node:crypto');
 
 let win = null;
 let tray = null;
@@ -457,11 +459,50 @@ ipcMain.handle('shell:open', async (_e, target) => {
 
 /* 取文件图标（.lnk 会自然解析成目标程序图标），转 dataURL 给页面用 */
 const iconCache = new Map();
+const ICON_DIR = path.join(app.getPath('temp'), 'qfd-icons');
+
+/* 用 PowerShell 直接抽 exe/ico 里的图标资源，比 app.getFileIcon 可靠
+   （后者对部分 .lnk 只给通用图标） */
+function extractIconPng(file, index = 0) {
+  return new Promise((resolve) => {
+    try {
+      fsx.mkdirSync(ICON_DIR, { recursive: true });
+      const key = crypto.createHash('md5').update(file + '|' + index).digest('hex').slice(0, 16);
+      const out = path.join(ICON_DIR, key + '.png');
+      if (fsx.existsSync(out) && fsx.statSync(out).size > 200) { resolve(out); return; }
+      execFile('powershell.exe',
+        ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', path.join(__dirname, 'icon.ps1'), file, out, String(index)],
+        { windowsHide: true, timeout: 8000 },
+        () => resolve((fsx.existsSync(out) && fsx.statSync(out).size > 200) ? out : null));
+    } catch { resolve(null); }
+  });
+}
+
 ipcMain.handle('shell:icon', async (_e, target) => {
   if (!target) return null;
   if (iconCache.has(target)) return iconCache.get(target);
+
+  let file = target;
+  let index = 0;
+  if (/\.lnk$/i.test(target)) {
+    try {
+      const lnk = shell.readShortcutLink(target);
+      if (lnk.icon && fsx.existsSync(lnk.icon)) { file = lnk.icon; index = lnk.iconIndex || 0; }
+      else if (lnk.target && fsx.existsSync(lnk.target)) { file = lnk.target; }
+    } catch { /* 解析失败就用原路径 */ }
+  }
+
+  /* 1) 直接抽资源图标 */
+  const png = await extractIconPng(file, index);
+  if (png) {
+    const url = 'file:///' + png.replace(/\\/g, '/');
+    iconCache.set(target, url);
+    return url;
+  }
+
+  /* 2) 退路：Electron 自带 */
   try {
-    const img = await app.getFileIcon(target, { size: 'large' });
+    const img = await app.getFileIcon(file, { size: 'large' });
     const url = img.isEmpty() ? null : img.toDataURL();
     iconCache.set(target, url);
     return url;
@@ -597,6 +638,8 @@ ipcMain.handle('sys:paths', async () => ({ home: app.getPath('home'), downloads:
 /* 控制中心：网络状态 + 音量/亮度 */
 ipcMain.handle('sys:net', async () => {
   const { execFile, spawn } = require('node:child_process');
+const fsx = require('node:fs');
+const crypto = require('node:crypto');
   return new Promise((resolve) => {
     execFile('netsh', ['wlan', 'show', 'interfaces'], { windowsHide: true, timeout: 3000 }, (err, stdout) => {
       if (err || !stdout) { resolve({ ssid: '' }); return; }
@@ -613,6 +656,8 @@ function runPs(cmd, timeout = 8000) {
   return new Promise((resolve) => {
     try {
       const { execFile, spawn } = require('node:child_process');
+const fsx = require('node:fs');
+const crypto = require('node:crypto');
       execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', cmd],
         { windowsHide: true, timeout }, (err, stdout, stderr) => {
           resolve({ ok: !err, out: (stdout || '').trim(), err: err ? String(stderr || err.message).trim() : '' });
@@ -647,6 +692,8 @@ ipcMain.on('sys:level', async (_e, kind, value) => {
     const r = await new Promise((resolve) => {
       try {
         const { execFile, spawn } = require('node:child_process');
+const fsx = require('node:fs');
+const crypto = require('node:crypto');
         execFile('powershell.exe',
           ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', scriptPath, steps > 0 ? 'up' : 'down', String(Math.abs(steps))],
           { windowsHide: true, timeout: 8000 },

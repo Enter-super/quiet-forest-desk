@@ -42,6 +42,23 @@ app/styles.css    全部样式
 app/icon.*        应用图标
 ```
 
+## 图标解析
+
+Dock 图标不用 `app.getFileIcon`（对 `.lnk` 常返回通用图标），改为：
+
+1. `.lnk` → `shell.readShortcutLink` 拿到目标 exe / 自定义图标与索引
+2. `icon.ps1` → `ExtractIconEx` 直接抽 exe 里的图标资源，导出 32×32 PNG
+3. 缓存到 `%TEMP%\qfd-icons\<md5>.png`，以 `file://` 返回给渲染进程
+4. 失败才退回 `getFileIcon`，再失败显示首字母徽章
+
+## 视觉与交互规范
+
+- 设计令牌：间距 4/8/12/16/20/24，圆角 10/14/18/26，缓动 `cubic-bezier(.22,1,.36,1)`，时长 140/200ms
+- 文字三级：`.96 / .74 / .60`，最低一级在 `#12161a` 上 ≈ 4.6:1，满足 WCAG AA
+- 所有按钮按下即 `scale(.97)`，键盘 `:focus-visible` 有 2px 薄荷色焦点环
+- 材质：颗粒（内联 SVG 噪声）+ 三向柔光 + 双层投影；卡片用双层背景裁剪做渐变描边
+- `prefers-reduced-motion: reduce` 全局降级动效
+
 ## 侧边栏（Alt + Q）
 
 全局快捷键 `Alt + Q`（`globalShortcut`）呼出屏幕右侧的液态玻璃面板，再次按下或 Esc 收起。

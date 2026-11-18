@@ -154,6 +154,8 @@ async function toggleMemTop() {
   if (!box) return;
   memOpen = !memOpen;
   box.hidden = !memOpen;
+  const rowEl = $('#memRow');
+  if (rowEl) rowEl.setAttribute('aria-expanded', String(memOpen));
   if (chev) chev.classList.toggle('is-open', memOpen);
   if (!memOpen) {
     box.innerHTML = '';      /* 收起即清空，之后不再拉取各应用占用 */
@@ -167,8 +169,11 @@ async function toggleMemTop() {
   } catch { box.innerHTML = '<div class="mem-empty">读取失败</div>'; }
 }
 
-/* 内存行点击绑定（不放在播放/待办区块里，避免被后续改动连带删除） */
+/* 内存行点击 + 键盘绑定（不放在播放/待办区块里，避免被后续改动连带删除） */
 $('#memRow')?.addEventListener('click', toggleMemTop);
+$('#memRow')?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleMemTop(); }
+});
 
 /* ---------------- 正在播放 ---------------- */
 const fmtT = (sec) => {

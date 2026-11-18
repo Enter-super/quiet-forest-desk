@@ -26,7 +26,7 @@
     <section class="card">
       <div class="card-t">系统</div>
       <div class="row"><span>CPU</span><i id="cpuCores">--</i><div class="bar"><b id="cpuBar"></b></div><em id="cpuVal">--</em></div>
-      <div class="row is-clickable" id="memRow" title="点击查看各应用内存占用">
+      <div class="row is-clickable" id="memRow" role="button" tabindex="0" aria-expanded="false" aria-label="展开各应用内存占用" title="点击查看各应用内存占用">
         <span>内存 <b class="chev" id="memChev">▾</b></span><i id="memInfo">--</i><div class="bar"><b id="memBar"></b></div><em id="memVal">--</em>
       </div>
       <div class="mem-list" id="memList" hidden></div>
@@ -73,7 +73,7 @@
       </div>
       <div class="todos" id="todos"></div>
       <div class="todo-add">
-        <span>＋</span><input id="todoInput" placeholder="添加待办" maxlength="60" />
+        <span>＋</span><input id="todoInput" placeholder="添加待办" maxlength="60" aria-label="添加待办" />
       </div>
     </section>
 

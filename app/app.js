@@ -1185,6 +1185,13 @@
     });
   }
 
+const TILE_SVG = {
+  '此电脑': '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="11" rx="2.2"/><path d="M9 19.5h6"/><path d="M12 15.5v4"/></svg>',
+  '用户文件夹': '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.6" r="3.4"/><path d="M4.9 19.4a7.1 7.1 0 0 1 14.2 0"/></svg>',
+  '下载': '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v10.5"/><path d="M7.6 10.4 12 14.9l4.4-4.5"/><path d="M4.6 19.5h14.8"/></svg>',
+  '回收站': '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 7h15"/><path d="M9.2 7V5.3A1.3 1.3 0 0 1 10.5 4h3a1.3 1.3 0 0 1 1.3 1.3V7"/><path d="M6.6 7l.85 11.9A1.7 1.7 0 0 0 9.1 20.5h5.8a1.7 1.7 0 0 0 1.65-1.6L17.4 7"/><path d="M10.6 11v5.4M13.4 11v5.4"/></svg>',
+};
+
   async function renderHome() {
     const d = new Date();
     const h = d.getHours();
@@ -1211,7 +1218,7 @@
       const b = document.createElement('button');
       b.className = 'home-tile';
       b.dataset.path = it.path;
-      b.innerHTML = `<img alt=""><span>${esc(it.name)}</span>`;
+      b.innerHTML = `<span class="ht-ico">${TILE_SVG[it.name] || ''}</span><span>${esc(it.name)}</span>`;
       b.addEventListener('click', () => { if (SHELL && SHELL.open) SHELL.open(it.path); });
       tiles.appendChild(b);
       if (SHELL && SHELL.icon) {

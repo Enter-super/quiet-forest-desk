@@ -206,3 +206,210 @@ body.is-paused .m-bars b { animation: none; transform: scaleY(.4); }
 .sb::-webkit-scrollbar { width: 4px; }
 .sb::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.16); border-radius: 99px; }
 .sb::-webkit-scrollbar-track { background: transparent; }
+
+/* ================= 设计令牌 & 打磨层（polish） ================= */
+:root {
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 20px; --sp-6: 24px;
+  --r-sm: 10px; --r-md: 14px; --r-lg: 18px; --r-xl: 26px;
+  --ease-out: cubic-bezier(.22, 1, .36, 1);
+  --ease-spring: cubic-bezier(.34, 1.4, .64, 1);
+  --dur-fast: 140ms; --dur-base: 200ms; --dur-slow: 300ms;
+  --ink-1: rgba(238, 243, 242, .96);
+  --ink-2: rgba(238, 243, 242, .74);
+  --ink-3: rgba(238, 243, 242, .60);   /* 12px 文本在 #12161a 上 ≈ 4.6:1，过 AA */
+  --focus: rgba(143, 227, 196, .85);
+}
+
+/* 键盘可达性：所有可交互元素都有明确的 focus 环 */
+.sb button:focus-visible,
+.sb input:focus-visible,
+.sb [tabindex]:focus-visible,
+.tab:focus-visible,
+.m-ctl button:focus-visible,
+.todo .del:focus-visible,
+.row.is-clickable:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
+/* 统一的按压反馈：指针按下即响应（Apple：pointer-down 立刻给反馈） */
+.m-ctl button,
+.tab,
+.chev,
+.row.is-clickable,
+.todo,
+.todo-add,
+.sb-hint {
+  transition: transform var(--dur-fast) var(--ease-out),
+              background-color var(--dur-fast) var(--ease-out),
+              color var(--dur-fast) var(--ease-out),
+              border-color var(--dur-fast) var(--ease-out);
+}
+.m-ctl button:active,
+.tab:active,
+.row.is-clickable:active,
+.todo-add:active { transform: scale(.97); }
+.todo:active { transform: scale(.995); }
+
+/* 卡片：更克制的描边 + 悬停微亮 */
+.card {
+  border-color: rgba(255, 255, 255, .10);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05);
+  transition: border-color var(--dur-base) var(--ease-out), background-color var(--dur-base) var(--ease-out);
+}
+.card:hover { border-color: rgba(255, 255, 255, .14); }
+
+.card-t { color: var(--ink-3); letter-spacing: .3px; margin-bottom: var(--sp-3); }
+
+/* 头部：底部分隔线，划清信息层级 */
+.sb-head { padding-bottom: var(--sp-3); border-bottom: 1px solid rgba(255, 255, 255, .07); margin-bottom: var(--sp-1); }
+.sb-hint { color: var(--ink-2); }
+.sb-hint:hover { background: rgba(255, 255, 255, .08); }
+
+/* 时钟：日期与温度的次级信息再压一档 */
+.c-date, .wx-meta i, .sb-foot { color: var(--ink-3); }
+.c-time { letter-spacing: -2px; }
+
+/* 系统行：数值统一等宽数字 + 右对齐基线 */
+.row > em, .row > i, .mi-val, .otp-code, .m-time span {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+.row { padding: 8px 0 6px; }
+.row > span { font-weight: 500; }
+.row.is-clickable:hover { background: rgba(255, 255, 255, .045); }
+
+/* 邮箱列表：内容可滚动时底部渐隐，避免半截文字 */
+.mail-list {
+  max-height: 118px;
+  -webkit-mask-image: linear-gradient(to bottom, #000 82%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 82%, transparent 100%);
+}
+.mail-list .mail-row { transition: background-color var(--dur-fast) var(--ease-out); border-radius: 8px; padding: 6px 6px; }
+.mail-list .mail-row:hover { background: rgba(255, 255, 255, .045); }
+.mail-row b { color: var(--ink-1); }
+.mail-row span { color: var(--ink-3); }
+
+/* 待办：空态更有存在感；每行有按压与选中反馈 */
+.todos-empty {
+  color: var(--ink-3);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: var(--sp-2); padding: 26px 8px; height: 100%;
+}
+.todos-empty::before {
+  content: "";
+  width: 22px; height: 22px; border-radius: 50%;
+  border: 1.5px dashed rgba(255, 255, 255, .22);
+}
+.todo { padding: 10px 8px; }
+.todo .dot { position: relative; }
+.todo .dot::after {          /* 14px 视觉，24px 命中区 */
+  content: ""; position: absolute; inset: -5px; border-radius: 50%;
+}
+.todo.is-done .txt { color: var(--ink-3); }
+
+/* 添加框：聚焦时边框点亮 */
+.todo-add { border-color: rgba(255, 255, 255, .10); }
+.todo-add:focus-within {
+  border-color: rgba(143, 227, 196, .45);
+  background: rgba(255, 255, 255, .06);
+  box-shadow: 0 0 0 3px rgba(143, 227, 196, .10);
+}
+
+/* 滚动条：静止更淡，悬停加深（与邮箱列表同一套） */
+.sb::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, .14); }
+.sb:hover::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, .26); }
+
+/* 载入骨架：替代"读取中…"的空白 */
+.mail-empty, .mem-empty {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 44px; color: var(--ink-3);
+}
+
+/* 尊重系统"减少动态效果" */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
+
+/* ================= 视觉精修 v2（只改观感，不动布局） ================= */
+html { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+
+/* 面板材质：三层柔光 + 双层投影 + 顶部高光，颗粒质感压在底层 */
+.sb {
+  background-image:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/></filter><rect width='140' height='140' filter='url(%23n)' opacity='0.42'/></svg>"),
+    radial-gradient(150% 105% at 0% 0%, rgba(146, 196, 186, .17), transparent 56%),
+    radial-gradient(120% 90% at 100% 2%, rgba(122, 142, 196, .13), transparent 62%),
+    radial-gradient(130% 85% at 50% 104%, rgba(96, 206, 176, .08), transparent 66%),
+    linear-gradient(168deg, rgba(27, 33, 35, .955), rgba(11, 14, 16, .975));
+  background-size: 140px 140px, auto, auto, auto, auto;
+  background-blend-mode: overlay, normal, normal, normal, normal;
+  box-shadow:
+    0 40px 96px rgba(0, 0, 0, .55),
+    0 10px 26px rgba(0, 0, 0, .34),
+    inset 0 1px 0 rgba(255, 255, 255, .11),
+    inset 0 0 0 1px rgba(255, 255, 255, .045);
+}
+
+/* 卡片：渐变描边 + 顶部缎光，避免"贴纸感" */
+.card {
+  border: 1px solid transparent;
+  background-color: transparent;   /* 只由两层渐变上色，避免纯色盖住描边 */
+  background-image:
+    linear-gradient(rgba(33, 40, 42, .62), rgba(28, 34, 36, .62)),
+    linear-gradient(135deg, rgba(255, 255, 255, .20), rgba(255, 255, 255, .035) 42%, rgba(255, 255, 255, .10));
+  background-origin: padding-box, border-box;
+  background-clip: padding-box, border-box;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .07), 0 1px 2px rgba(0, 0, 0, .18);
+}
+
+/* 数值与进度条：加一点发光，让数据"亮"起来 */
+.bar > b, .mi-bar > b {
+  background-image: linear-gradient(90deg, #7ce3c2 0%, #8fd8ff 100%);
+  box-shadow: 0 0 10px rgba(124, 227, 194, .38), inset 0 1px 0 rgba(255, 255, 255, .28);
+}
+
+/* 时钟：更大字号下收紧字距 + 轻微投影提升"印刷感" */
+.c-time { letter-spacing: -2.6px; text-shadow: 0 3px 22px rgba(0, 0, 0, .38); }
+.c-date { letter-spacing: .6px; }
+
+/* 页签：激活态做成带高光的胶囊 */
+.tab.is-on {
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, .17), rgba(255, 255, 255, .07));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18), 0 1px 6px rgba(0, 0, 0, .25);
+}
+
+/* 验证码：薄荷光晕，和进度条同一色系 */
+.otp-box {
+  background-image: linear-gradient(180deg, rgba(96, 224, 158, .13), rgba(96, 224, 158, .07));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .10), 0 0 22px rgba(70, 220, 150, .10);
+}
+.otp-code { text-shadow: 0 0 18px rgba(70, 220, 150, .35); }
+
+/* 播放封面：从纯色块升级为带内部径向光的"唱片"质感 */
+.cover {
+  background-image:
+    radial-gradient(80% 80% at 28% 22%, rgba(255, 255, 255, .34), transparent 58%),
+    linear-gradient(142deg, #7bb6d6 0%, #7d7fc8 52%, #38455f 100%);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, .42), inset 0 1px 0 rgba(255, 255, 255, .28);
+}
+
+/* 添加框：内凹质感 */
+.todo-add {
+  background-image: linear-gradient(180deg, rgba(0, 0, 0, .18), rgba(255, 255, 255, .03));
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, .28);
+}
+
+/* 头部品牌圆点：加一圈光晕 */
+.sb-logo i { box-shadow: 0 0 10px rgba(150, 226, 208, .55), inset 0 0 4px rgba(255, 255, 255, .4); }
+
+/* ALT+Q 提示：更精致的描边胶囊 */
+.sb-hint {
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, .09), rgba(255, 255, 255, .03));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12);
+}

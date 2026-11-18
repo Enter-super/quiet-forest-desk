@@ -1798,3 +1798,144 @@ body.drawer-open .capsule { transform: translateX(-50%) translateY(-10px) scale(
 }
 .mail-card.has-otp .mc-label { color: rgba(53, 224, 122, .75); }
 .mail-card .mc-addr { word-break: break-all; }
+
+/* ================= 打磨层（polish）：控制中心 / Dock / 胶囊 ================= */
+:root {
+  --ease-out: cubic-bezier(.22, 1, .36, 1);
+  --dur-fast: 140ms; --dur-base: 200ms;
+  --focus: rgba(143, 227, 196, .85);
+}
+
+/* 键盘焦点环 */
+.cc-tab:focus-visible,
+.cc-card:focus-visible,
+.cc-btn:focus-visible,
+.cc-gear:focus-visible,
+.dock-item:focus-visible,
+.capsule:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* 页签：更大的命中区 + 位移反馈 */
+.cc-tab { min-height: 30px; padding: 6px 12px; }
+.cc-tab.is-on { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .10); }
+
+/* 卡片按钮：按下即缩，抬起回弹 */
+.cc-card, .cc-btn, .cc-tab, .cc-gear {
+  transition: transform var(--dur-fast) var(--ease-out),
+              background-color var(--dur-fast) var(--ease-out),
+              border-color var(--dur-fast) var(--ease-out);
+}
+.cc-card:active, .cc-btn:active, .cc-tab:active, .cc-gear:active { transform: scale(.97); }
+
+/* Dock：图标按下缩、悬停微抬（不改变布局，只动 transform） */
+.dock-item {
+  transition: transform var(--dur-fast) var(--ease-out), filter var(--dur-fast) var(--ease-out);
+}
+.dock-item:active { transform: translateY(1px) scale(.94); }
+
+/* 胶囊：按下缩小，悬停轻抬 */
+.capsule {
+  transition: transform var(--dur-fast) var(--ease-out),
+              background-color var(--dur-base) var(--ease-out),
+              box-shadow var(--dur-base) var(--ease-out);
+}
+.capsule:active { transform: scale(.96); }
+
+/* 控制中心入场：轻微上浮 + 淡入，曲线统一 */
+.cc.is-open { animation: ccIn 220ms var(--ease-out); }
+@keyframes ccIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(-6px) scale(.985); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
+
+/* 首页瓦片图标 */
+.home-tile .ht-ico { display: grid; place-items: center; color: rgba(255, 255, 255, .88); }
+.home-tile .ht-ico svg { display: block; }
+.home-tile { transition: transform 140ms var(--ease-out), background-color 140ms var(--ease-out); }
+.home-tile:active { transform: scale(.97); }
+
+/* ================= 视觉精修 v2（只改观感，不动布局） ================= */
+html { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+
+/* 控制中心：同一套材质语言 —— 颗粒 + 双向柔光 + 双投影 */
+.cc {
+  background-image:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/></filter><rect width='140' height='140' filter='url(%23n)' opacity='0.42'/></svg>"),
+    radial-gradient(130% 100% at 6% 0%, rgba(146, 196, 186, .20), transparent 58%),
+    radial-gradient(120% 90% at 96% 100%, rgba(122, 142, 196, .16), transparent 62%),
+    linear-gradient(165deg, rgba(46, 42, 58, .90), rgba(24, 24, 32, .94));
+  background-size: 140px 140px, auto, auto, auto;
+  background-blend-mode: overlay, normal, normal, normal;
+  box-shadow:
+    0 44px 100px rgba(0, 0, 0, .55),
+    0 12px 28px rgba(0, 0, 0, .34),
+    inset 0 1px 0 rgba(255, 255, 255, .13),
+    inset 0 0 0 1px rgba(255, 255, 255, .05);
+}
+
+/* 页签激活态：胶囊高光 */
+.cc-tab.is-on {
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, .20), rgba(255, 255, 255, .08));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22), 0 1px 8px rgba(0, 0, 0, .28);
+}
+
+/* 首页瓦片：玻璃卡片 + 悬停辉光 */
+.home-tile {
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, .075), rgba(255, 255, 255, .025));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .10), 0 1px 3px rgba(0, 0, 0, .22);
+}
+.home-tile:hover {
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, .12), rgba(255, 255, 255, .05));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .16), 0 6px 18px rgba(0, 0, 0, .3);
+}
+.home-tile .ht-ico { filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .35)); }
+
+/* 卡片按钮（WLAN / 蓝牙等）：同款玻璃 */
+.cc-card {
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, .085), rgba(255, 255, 255, .03));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .10);
+}
+.cc-card:hover {
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, .13), rgba(255, 255, 255, .06));
+}
+
+/* 滑杆：填充带发光 */
+.cc-slider .s-fill, .s-fill {
+  background-image: linear-gradient(90deg, #7ce3c2, #9fd8ff);
+  box-shadow: 0 0 10px rgba(124, 227, 194, .40);
+}
+
+/* Dock：胶囊容器加缎光与更深的落地阴影 */
+.dock {
+  box-shadow:
+    0 24px 54px rgba(0, 0, 0, .48),
+    0 6px 16px rgba(0, 0, 0, .28),
+    inset 0 1px 0 rgba(255, 255, 255, .13),
+    inset 0 0 0 1px rgba(255, 255, 255, .05);
+}
+
+/* 胶囊：金属质感的环形高光 */
+.capsule {
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, .10), rgba(255, 255, 255, .015));
+  box-shadow:
+    0 8px 22px rgba(0, 0, 0, .40),
+    inset 0 1px 0 rgba(255, 255, 255, .18),
+    inset 0 0 0 1px rgba(255, 255, 255, .06);
+}
+.capsule:hover {
+  box-shadow:
+    0 10px 26px rgba(0, 0, 0, .45),
+    0 0 18px rgba(150, 226, 208, .18),
+    inset 0 1px 0 rgba(255, 255, 255, .22),
+    inset 0 0 0 1px rgba(255, 255, 255, .08);
+}
