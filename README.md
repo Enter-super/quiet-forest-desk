@@ -1,6 +1,6 @@
 # 静林桌面 · QuietForestDesk
 
-Windows 桌面部件壳（Electron）。把 **顶部胶囊**、**底部 Dock**、**控制中心** 贴在桌面层，
+Windows 桌面部件壳（Electron）。把 **顶部胶囊**、**底部 Dock**、**控制中心** 桌面层，
 不遮挡任何应用窗口。
 
 ![icon](app/icon.png)
