@@ -195,6 +195,7 @@ function createSidebar() {
     const t = setTimeout(() => {
       if (!sbWin || sbWin.isDestroyed() || !sbWin.isVisible()) return;
       if (sbWin.isFocused()) return;
+      if (mailWin && !mailWin.isDestroyed() && mailWin.isVisible()) return;   /* 详情窗开着时保留侧边栏 */
       sbWin.hide();
       stopClickHook();
     }, 1200);
@@ -321,13 +322,31 @@ ipcMain.on('sidebar:height', (_e, h) => {
 let clickProc = null;
 let clickBuf = '';
 
+function inBounds(win, dip) {
+  if (!win || win.isDestroyed() || !win.isVisible()) return false;
+  const b = win.getBounds();
+  return dip.x >= b.x && dip.x <= b.x + b.width && dip.y >= b.y && dip.y <= b.y + b.height;
+}
+
 function handleOutsideClick(px, py) {
-  if (!sbWin || sbWin.isDestroyed() || !sbWin.isVisible()) return;
   let dip;
   try { dip = screen.screenToDipPoint({ x: px, y: py }); } catch { dip = { x: px, y: py }; }
-  const b = sbWin.getBounds();
-  const inside = dip.x >= b.x && dip.x <= b.x + b.width && dip.y >= b.y && dip.y <= b.y + b.height;
-  if (!inside) { sbWin.hide(); stopClickHook(); }
+
+  const sidebarOn = !!sbWin && !sbWin.isDestroyed() && sbWin.isVisible();
+  const mailOn = !!mailWin && !mailWin.isDestroyed() && mailWin.isVisible();
+  if (!sidebarOn && !mailOn) { stopClickHook(); return; }
+
+  const inSidebar = inBounds(sbWin, dip);
+  const inMail = inBounds(mailWin, dip);
+
+  /* 点在详情窗内部：什么都不关（含侧边栏） */
+  if (inMail) return;
+
+  /* 详情窗开着：点到它外面、且不在侧边栏上 → 只收详情 */
+  if (mailOn && !inSidebar) closeMailDetail();
+
+  /* 点侧边栏外面 → 侧边栏与详情一起收 */
+  if (sidebarOn && !inSidebar) { sbWin.hide(); stopClickHook(); closeMailDetail(); }
 }
 
 function startClickHook() {
@@ -360,7 +379,100 @@ function stopClickHook() {
   clickProc = null;
 }
 
-ipcMain.on('sidebar:close', () => { if (sbWin && !sbWin.isDestroyed()) { sbWin.hide(); stopClickHook(); } });
+/* ---------------------------------------------------------------- 邮件详情窗
+   点侧边栏里的邮件 → 在侧边栏左侧弹出详情，显示完整正文。 */
+let mailWin = null;
+let mailKeeper = null;
+
+function mailDetailBounds() {
+  const d = screen.getPrimaryDisplay().workArea;
+  const base = (sbWin && !sbWin.isDestroyed() && sbWin.isVisible()) ? sbWin.getBounds() : null;
+  const w = Math.min(640, Math.max(460, d.width - 480));
+  const h = Math.min(760, d.height - 60);
+  const anchorX = base ? base.x : (d.x + d.width - 420);
+  let x = anchorX - w - 12;
+  if (x < d.x + 12) x = d.x + 12;
+  const y = Math.max(d.y + 12, (base ? base.y : d.y + 20));
+  return { x, y, width: w, height: h };
+}
+
+function openMailDetail(seq) {
+  if (mailWin && !mailWin.isDestroyed()) {
+    mailWin.setBounds(mailDetailBounds());
+    try { mailWin.webContents.send('mail:show', seq); } catch { /* 忽略 */ }
+    mailWin.show();
+    mailWin.setAlwaysOnTop(true, 'screen-saver');
+    mailWin.moveTop();
+    mailWin.focus();
+    return;
+  }
+  mailWin = new BrowserWindow({
+    ...mailDetailBounds(),
+    frame: false,
+    transparent: true,
+    backgroundColor: '#00000000',
+    hasShadow: false,
+    resizable: false,
+    skipTaskbar: true,
+    show: false,
+    title: '邮件详情',
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+  mailWin.loadFile(path.join(__dirname, 'app', 'maildetail.html'), { query: { seq: String(seq) } });
+  mailWin.once('ready-to-show', () => {
+    if (!mailWin) return;
+    mailWin.show();
+    mailWin.setAlwaysOnTop(true, 'screen-saver');
+    mailWin.moveTop();
+    mailWin.focus();
+  });
+  mailWin.on('closed', () => { mailWin = null; if (mailKeeper) { clearInterval(mailKeeper); mailKeeper = null; } });
+  if (!mailKeeper) {
+    /* 别的置顶窗口（比如浏览器全屏）会把我们压下去，这里周期性重申层级 */
+    mailKeeper = setInterval(() => {
+      if (!mailWin || mailWin.isDestroyed() || !mailWin.isVisible()) return;
+      try { mailWin.setAlwaysOnTop(true, 'screen-saver'); } catch { /* 忽略 */ }
+    }, 1500);
+  }
+}
+
+function closeMailDetail() {
+  if (mailWin && !mailWin.isDestroyed()) mailWin.hide();
+}
+
+ipcMain.on('mail:open', (_e, seq) => {
+  const n = Number(seq) || 0;
+  if (n > 0) openMailDetail(n);
+});
+
+ipcMain.on('mail:height', (_e, h) => {
+  if (!mailWin || mailWin.isDestroyed() || !mailWin.isVisible()) return;
+  const d = screen.getPrimaryDisplay().workArea;
+  const want = Math.max(260, Math.min(Math.round(Number(h) || 0), d.height - 60));
+  const b = mailWin.getBounds();
+  if (Math.abs(b.height - want) > 2) {
+    mailWin.setBounds({ x: b.x, y: b.y, width: b.width, height: want });
+  }
+});
+
+ipcMain.on('mail:close', () => closeMailDetail());
+
+ipcMain.handle('mail:body', async (_e, seq) => {
+  const cfg = mailer.loadConfig(app.getPath('userData'));
+  if (!cfg || !cfg.host || !cfg.user) return { error: '还没有绑定邮箱' };
+  try {
+    return await mailer.fetchBody({ ...cfg, seq: Number(seq) || 0 });
+  } catch (e) {
+    return { error: String((e && e.message) || e) };
+  }
+});
+
+ipcMain.on('sidebar:close', () => { if (sbWin && !sbWin.isDestroyed()) { sbWin.hide(); stopClickHook(); } closeMailDetail(); });
 
 function createTray() {
   const icon = nativeImage.createFromPath(path.join(__dirname, 'app', 'icon.ico'));

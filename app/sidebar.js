@@ -192,6 +192,22 @@ function renderMemTop(list) {
   reportHeight();
 }
 
+/* 点邮件 → 在侧边栏左侧弹出详情 */
+$('#mailList')?.addEventListener('click', (e) => {
+  const row = e.target.closest('.mail-row');
+  if (!row) return;
+  const seq = Number(row.dataset.seq) || 0;
+  if (seq > 0 && SHELL.openMail) SHELL.openMail(seq);
+});
+$('#mailList')?.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const row = e.target.closest('.mail-row');
+  if (!row) return;
+  e.preventDefault();
+  const seq = Number(row.dataset.seq) || 0;
+  if (seq > 0 && SHELL.openMail) SHELL.openMail(seq);
+});
+
 async function toggleMemTop() {
   const box = $('#memList');
   const chev = $('#memChev');
@@ -295,8 +311,9 @@ async function loadMail() {
       if (cache.error) list.innerHTML = '<div class="mail-empty">收取失败：' + esc(cache.error) + '</div>';
       else if (!msgs.length) list.innerHTML = '<div class="mail-empty">收件箱是空的</div>';
       else {
-        list.innerHTML = msgs.slice(0, 4).map((mm) => (
-          '<div class="mail-row"><b>' + esc((mm.from || '').replace(/<.*?>/, '').trim()) + '</b>'
+        list.innerHTML = msgs.slice(0, 10).map((mm) => (
+          '<div class="mail-row" data-seq="' + (mm.seq || 0) + '" role="button" tabindex="0" title="点击查看完整邮件">'
+          + '<b>' + esc((mm.from || '').replace(/<.*?>/, '').trim()) + '</b>'
           + '<span>' + esc(mm.subject || '(无主题)') + '</span></div>'
         )).join('');
       }

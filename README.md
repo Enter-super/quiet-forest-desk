@@ -59,6 +59,16 @@ Dock 图标不用 `app.getFileIcon`（对 `.lnk` 常返回通用图标），改�
 - 材质：颗粒（内联 SVG 噪声）+ 三向柔光 + 双层投影；卡片用双层背景裁剪做渐变描边
 - `prefers-reduced-motion: reduce` 全局降级动效
 
+## 邮件详情窗
+
+点侧边栏里的任意邮件 → 在**侧边栏左侧**弹出详情窗，显示完整正文。
+
+- 收件数 10 条（`fetchInbox` 的 `limit` 默认值），侧边栏列表内滚动
+- 正文按 MIME 解析：`boundary` 切段 → 优先 `text/plain` → 按段解码（base64 / quoted-printable）→ `charset` 还原（GBK 用 `TextDecoder('gbk')`）→ HTML 剥标签
+- 窗口高度随内容自适应（`ResizeObserver` 测 `.md` → `mail:height` → `setBounds`，上限为工作区高度 − 80）
+- 识别到验证码时顶部显示绿色大字 + 复制按钮
+- 点击规则：点详情内部不关任何窗口；点侧边栏内部只换内容；点两者之外一起收起
+
 ## 天气城市
 
 按 IP 定位会被代理带偏（走了 Clash 就变成出口节点所在城市），所以**城市可手动指定**：

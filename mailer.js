@@ -45,7 +45,7 @@ function extractLiterals(buf) {
 }
 
 /* ---------- 一次抓取 ---------- */
-function fetchInbox({ host, port = 993, user, pass, limit = 5 }) {
+function fetchInbox({ host, port = 993, user, pass, limit = 10 }) {
   return new Promise((resolve, reject) => {
     let sock;
     let tag = 0;
@@ -53,6 +53,7 @@ function fetchInbox({ host, port = 993, user, pass, limit = 5 }) {
     let raw = Buffer.alloc(0);
     let done = false;
     let mailboxCount = 0;
+    let firstSeq = 1;
 
     const finish = (err, data) => {
       if (done) return;
@@ -104,6 +105,7 @@ function fetchInbox({ host, port = 993, user, pass, limit = 5 }) {
           raw = Buffer.alloc(0);
           if (!mailboxCount) { clearTimeout(timer); finish(null, { count: 0, messages: [] }); return; }
           const from = Math.max(1, mailboxCount - limit + 1);
+          firstSeq = from;
           curTag = send(`FETCH ${from}:${mailboxCount} (BODY.PEEK[HEADER.FIELDS (FROM SUBJECT DATE)])`);
           stage = 3;
         }
@@ -122,7 +124,9 @@ function fetchInbox({ host, port = 993, user, pass, limit = 5 }) {
             const mm = head.match(new RegExp(`^${k}:\\s*([\\s\\S]*?)(?=\\r?\\n[!-9;-~]+:|$)`, 'im'));
             return mm ? decodeWords(mm[1].replace(/\r?\n\s+/g, ' ').trim()) : '';
           };
+          const idx = messages.length;
           messages.push({
+            seq: firstSeq + idx,
             from: get('From').replace(/<.*?>/, '').replace(/"/g, '').trim() || get('From'),
             subject: get('Subject'),
             date: get('Date'),
@@ -153,4 +157,194 @@ function clearConfig(dir) {
   try { fs.unlinkSync(storeFile(dir)); } catch { /* ignore */ }
 }
 
-module.exports = { fetchInbox, loadConfig, saveConfig, clearConfig };
+
+/* ---------- 正文解析 ---------- */
+function decodeQuotedPrintable(s) {
+  return Buffer.from(
+    s.replace(/=\r?\n/g, '').replace(/=([0-9A-Fa-f]{2})/g, (_, h) => String.fromCharCode(parseInt(h, 16))),
+    'latin1'
+  );
+}
+
+function htmlToText(html) {
+  return String(html)
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|tr|li|h[1-6])>/gi, '\n')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#(\d+);/g, (_, d) => String.fromCharCode(Number(d)));
+}
+
+function splitHeadBody(raw) {
+  const m = String(raw).match(/\r?\n\r?\n/);
+  if (!m) return { head: String(raw), body: '' };
+  const i = m.index;
+  return { head: String(raw).slice(0, i), body: String(raw).slice(i + m[0].length) };
+}
+
+function headerGetter(head) {
+  return (k) => {
+    const m = head.match(new RegExp('^' + k + ':\\s*([\\s\\S]*?)(?=\\r?\\n[!-9;-~]+:|$)', 'im'));
+    return m ? m[1].replace(/\r?\n\s+/g, ' ').trim() : '';
+  };
+}
+
+function decodeBody(body, h) {
+  const enc = h('Content-Transfer-Encoding').toLowerCase();
+  const ctype = h('Content-Type').toLowerCase();
+  const charset = (ctype.match(/charset="?([\w-]+)/) || [])[1] || 'utf-8';
+
+  let bytes;
+  if (enc === 'base64') bytes = Buffer.from(body.replace(/[^A-Za-z0-9+/=]/g, ''), 'base64');
+  else if (enc === 'quoted-printable') bytes = decodeQuotedPrintable(body);
+  else bytes = Buffer.from(body, 'latin1');
+
+  let text;
+  try {
+    text = new TextDecoder(/^gb/i.test(charset) ? 'gbk' : charset).decode(bytes);
+  } catch {
+    text = bytes.toString('utf8');
+  }
+  return { text, isHtml: /text\/html/.test(ctype) || /<html|<body|<div|<p[\s>]/i.test(text) };
+}
+
+/* 递归取第一个有内容的文本部件 */
+function parsePart(raw, depth = 0) {
+  if (depth > 4) return null;
+  const { head, body } = splitHeadBody(raw);
+  const h = headerGetter(head);
+  const ctype = h('Content-Type');
+  const boundary = (ctype.match(/boundary="?([^";]+)"?/i) || [])[1];
+
+  if (boundary) {
+    const safe = boundary.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const chunks = body.split(new RegExp('--' + safe + '(?:--)?[ \\t]*\\r?\\n'));
+    for (const c of chunks) {
+      const t = c.trim();
+      if (!t || t === '--') continue;
+      const r = parsePart(t, depth + 1);
+      if (r && r.text && r.text.trim()) return r;
+    }
+    return null;
+  }
+  const d = decodeBody(body, h);
+  return { text: d.text, isHtml: d.isHtml };
+}
+
+function parseMessage(raw) {
+  const { head } = splitHeadBody(raw);
+  const h = headerGetter(head);
+  const body = splitHeadBody(raw).body;
+
+  /* 正文部件：优先 text/plain，其次第一个非空文本部件 */
+  let part = null;
+  const topType = h('Content-Type');
+  const boundary = (topType.match(/boundary="?([^";]+)"?/i) || [])[1];
+  if (boundary) {
+    const safe = boundary.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const chunks = body.split(new RegExp('--' + safe + '(?:--)?[ \\t]*\\r?\\n'));
+    let plain = null, html = null;
+    for (const c of chunks) {
+      const t = c.trim();
+      if (!t || t === '--') continue;
+      const sub = splitHeadBody(t);
+      const sh = headerGetter(sub.head);
+      const st = sh('Content-Type').toLowerCase();
+      const r = parsePart(t, 1);
+      if (!r || !r.text || !r.text.trim()) continue;
+      const isPlain = /text\/plain/.test(st) || (!/text\/html/.test(st) && !r.isHtml);
+      if (isPlain && !plain) plain = r;
+      else if (!html) html = r;
+    }
+    part = plain || html;
+  } else {
+    part = parsePart(raw, 0);
+  }
+
+  let text = (part && part.text) || '';
+  if (!text && !boundary) {
+    const d = decodeBody(body, h);
+    text = d.text;
+    if (d.isHtml) text = htmlToText(text);
+  } else if (part && part.isHtml) {
+    text = htmlToText(text);
+  }
+
+  text = String(text).replace(/\r/g, '').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+
+  return {
+    from: decodeWords(h('From')).replace(/<.*?>/, '').replace(/"/g, '').trim() || decodeWords(h('From')),
+    subject: decodeWords(h('Subject')),
+    date: h('Date'),
+    text: text.slice(0, 8000),
+  };
+}
+
+/* ---------- 取单封正文 ---------- */
+function fetchBody({ host, port = 993, user, pass, seq }) {
+  return new Promise((resolve, reject) => {
+    let sock;
+    let tag = 0;
+    let stage = 0;
+    let raw = Buffer.alloc(0);
+    let done = false;
+
+    const finish = (err, data) => {
+      if (done) return;
+      done = true;
+      try { sock && sock.destroy(); } catch { /* ignore */ }
+      err ? reject(err) : resolve(data);
+    };
+
+    const timer = setTimeout(() => finish(new Error('连接 IMAP 超时')), TIMEOUT);
+
+    try {
+      sock = tls.connect({ host, port, servername: host, rejectUnauthorized: false }, () => {});
+    } catch (e) { clearTimeout(timer); reject(e); return; }
+
+    sock.setEncoding('latin1');
+    sock.on('error', (e) => { clearTimeout(timer); finish(e); });
+
+    const send = (cmd) => { tag += 1; sock.write(`A${tag} ${cmd}\r\n`); return `A${tag}`; };
+
+    sock.on('data', (chunk) => {
+      raw = Buffer.concat([raw, Buffer.from(chunk, 'latin1')]);
+      const { text } = extractLiterals(raw);
+
+      if (stage === 0) {
+        if (/^\* (OK|PREAUTH)/m.test(text)) {
+          send(`LOGIN "${String(user).replace(/"/g, '\\"')}" "${String(pass).replace(/"/g, '\\"')}"`);
+          stage = 1;
+        }
+        return;
+      }
+      if (!new RegExp('^A' + tag + ' (OK|NO|BAD)', 'm').test(text)) return;
+
+      if (stage === 1) {
+        if (new RegExp('^A' + tag + ' (NO|BAD)', 'm').test(text)) {
+          clearTimeout(timer); finish(new Error('登录失败：检查邮箱或授权码')); return;
+        }
+        raw = Buffer.alloc(0);
+        send('SELECT "INBOX"');
+        stage = 2;
+        return;
+      }
+      if (stage === 2) {
+        raw = Buffer.alloc(0);
+        send(`FETCH ${seq} BODY.PEEK[]`);
+        stage = 3;
+        return;
+      }
+      if (stage === 3) {
+        clearTimeout(timer);
+        const { lits } = extractLiterals(raw);
+        if (!lits.length) { finish(new Error('没有取到正文')); return; }
+        try { finish(null, parseMessage(lits[lits.length - 1])); } catch (e) { finish(e); }
+      }
+    });
+  });
+}
+
+module.exports = { fetchInbox, fetchBody, loadConfig, saveConfig, clearConfig };

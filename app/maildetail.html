@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>邮件详情</title>
+<link rel="stylesheet" href="maildetail.css" />
+</head>
+<body>
+  <article class="md">
+    <header class="md-head">
+      <div class="md-from" id="mdFrom">—</div>
+      <button class="md-close" id="mdClose" aria-label="关闭">✕</button>
+    </header>
+    <h1 class="md-subject" id="mdSubject">正在读取…</h1>
+    <div class="md-date" id="mdDate"></div>
+    <div class="md-otp" id="mdOtp" hidden>
+      <span class="md-otp-code" id="mdOtpCode"></span>
+      <button class="md-otp-copy" id="mdOtpCopy">复制验证码</button>
+    </div>
+    <div class="md-body" id="mdBody"></div>
+    <footer class="md-foot">Esc 关闭 · 拖动标题栏无 · 内容只读</footer>
+  </article>
+  <script src="maildetail.js"></script>
+</body>
+</html>

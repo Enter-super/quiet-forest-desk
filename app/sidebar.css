@@ -422,3 +422,9 @@ html { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; 
   background: transparent; color: inherit; font: inherit; letter-spacing: inherit;
   border-bottom: 1px dashed rgba(255, 255, 255, .35);
 }
+
+/* 邮件行可点击 */
+.mail-row[data-seq] { cursor: pointer; }
+.mail-row[data-seq]:hover { background: rgba(255, 255, 255, .06); }
+.mail-row[data-seq]:active { transform: scale(.995); }
+.mail-row[data-seq]:focus-visible { outline: 2px solid rgba(143, 227, 196, .85); outline-offset: 2px; }
