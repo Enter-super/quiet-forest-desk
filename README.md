@@ -64,6 +64,7 @@ Dock 图标不用 `app.getFileIcon`（对 `.lnk` 常返回通用图标），改�
 点侧边栏里的任意邮件 → 在**侧边栏左侧**弹出详情窗，显示完整正文。
 
 - 收件数 10 条（`fetchInbox` 的 `limit` 默认值），侧边栏列表内滚动
+- 邮箱卡片右上角有**手动刷新**按钮：点击重新建立 IMAP 连接收信，期间图标旋转，`is-busy` 防重复点击
 - 正文按 MIME 解析：`boundary` 切段 → 优先 `text/plain` → 按段解码（base64 / quoted-printable）→ `charset` 还原（GBK 用 `TextDecoder('gbk')`）→ HTML 剥标签
 - 窗口高度随内容自适应（`ResizeObserver` 测 `.md` → `mail:height` → `setBounds`，上限为工作区高度 − 80）
 - 识别到验证码时顶部显示绿色大字 + 复制按钮

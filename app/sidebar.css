@@ -428,3 +428,20 @@ html { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; 
 .mail-row[data-seq]:hover { background: rgba(255, 255, 255, .06); }
 .mail-row[data-seq]:active { transform: scale(.995); }
 .mail-row[data-seq]:focus-visible { outline: 2px solid rgba(143, 227, 196, .85); outline-offset: 2px; }
+
+/* 邮箱刷新按钮 */
+.mail-refresh {
+  margin-left: 8px; width: 22px; height: 22px; flex: 0 0 auto;
+  display: grid; place-items: center;
+  border-radius: 50%; border: 1px solid rgba(255, 255, 255, .12);
+  background: rgba(255, 255, 255, .05); color: var(--ink-2);
+  cursor: pointer; padding: 0;
+  transition: background-color 140ms var(--ease-out), color 140ms var(--ease-out), transform 140ms var(--ease-out);
+}
+.mail-refresh:hover { background: rgba(255, 255, 255, .12); color: var(--ink-1); }
+.mail-refresh:active { transform: scale(.92); }
+.mail-refresh:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.mail-refresh svg { display: block; }
+.mail-refresh.is-busy { color: #8fe3c4; }
+.mail-refresh.is-busy svg { animation: mailSpin 700ms linear infinite; }
+@keyframes mailSpin { to { transform: rotate(360deg); } }

@@ -55,7 +55,14 @@
     </section>
 
     <section class="card" id="mailCard">
-      <div class="card-t">邮箱<span class="mail-addr" id="mailAddr">未绑定</span></div>
+      <div class="card-t">邮箱
+        <span class="mail-addr" id="mailAddr">未绑定</span>
+        <button class="mail-refresh" id="mailRefresh" title="立即收取" aria-label="刷新邮件">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 11a8 8 0 1 0-2.3 5.4" /><path d="M20 4.5V11h-6.2" />
+          </svg>
+        </button>
+      </div>
       <div class="otp-box" id="otpBox" hidden>
         <span class="otp-code" id="otpCode">------</span>
         <span class="otp-src" id="otpSrc"></span>

@@ -192,6 +192,20 @@ function renderMemTop(list) {
   reportHeight();
 }
 
+/* 手动刷新邮件 */
+$('#mailRefresh')?.addEventListener('click', async (e) => {
+  const btn = e.currentTarget;
+  if (btn.classList.contains('is-busy')) return;
+  btn.classList.add('is-busy');
+  try {
+    if (SHELL.mailRefresh) await SHELL.mailRefresh();
+    await loadMail();
+  } catch { /* 忽略 */ }
+  finally {
+    setTimeout(() => btn.classList.remove('is-busy'), 500);
+  }
+});
+
 /* 点邮件 → 在侧边栏左侧弹出详情 */
 $('#mailList')?.addEventListener('click', (e) => {
   const row = e.target.closest('.mail-row');
