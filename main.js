@@ -196,17 +196,23 @@ function createSidebar() {
       if (!sbWin || sbWin.isDestroyed() || !sbWin.isVisible()) return;
       if (sbWin.isFocused()) return;
       if (mailWin && !mailWin.isDestroyed() && mailWin.isVisible()) return;   /* 详情窗开着时保留侧边栏 */
-      sbWin.hide();
-      stopClickHook();
+      destroySidebar();
     }, 1200);
     sbWin.once('focus', () => clearTimeout(t));
   });
   sbWin.on('closed', () => { sbWin = null; });
 }
 
+function destroySidebar() {
+  stopClickHook();
+  closeMailDetail();
+  if (sbWin && !sbWin.isDestroyed()) { try { sbWin.destroy(); } catch { /* 忽略 */ } }
+  sbWin = null;
+}
+
 function toggleSidebar() {
   if (!sbWin || sbWin.isDestroyed()) createSidebar();
-  if (sbWin.isVisible()) { sbWin.hide(); stopClickHook(); return; }
+  if (sbWin.isVisible()) { destroySidebar(); return; }
   sbWin.setBounds(sidebarBounds());
   sbWin.show();
   sbWin.focus();
@@ -251,7 +257,7 @@ ipcMain.handle('sys:stats', async () => {
   const total = os.totalmem(), free = os.freemem();
   const now = Date.now();
 
-  if (now - cache.gpu.t > 2500) {
+  if (now - cache.gpu.t > 8000) {
     cache.gpu.t = now;
     execFile('nvidia-smi', ['--query-gpu=utilization.gpu,memory.used,memory.total', '--format=csv,noheader,nounits'],
       { windowsHide: true, timeout: 4000 },
@@ -262,7 +268,7 @@ ipcMain.handle('sys:stats', async () => {
         if (Number.isFinite(p[1]) && Number.isFinite(p[2])) cache.vram.v = { used: p[1], total: p[2] };
       });
   }
-  if (now - cache.net.t > 3000) {
+  if (now - cache.net.t > 8000) {
     cache.net.t = now;
     runScript('net.ps1').then((v) => { const n = Number(v); if (Number.isFinite(n)) cache.net.v = n; });
   }
@@ -291,7 +297,7 @@ ipcMain.handle('sys:memtop', async () => {
 
 ipcMain.handle('sys:media', async () => {
   const now = Date.now();
-  if (now - cache.media.t < 1500) return cache.media.v;
+  if (now - cache.media.t < 8000) return cache.media.v;
   cache.media.t = now;
   const raw = await runScript('media.ps1');
   if (!raw || raw === '{}') { cache.media.v = null; return null; }
@@ -346,7 +352,7 @@ function handleOutsideClick(px, py) {
   if (mailOn && !inSidebar) closeMailDetail();
 
   /* 点侧边栏外面 → 侧边栏与详情一起收 */
-  if (sidebarOn && !inSidebar) { sbWin.hide(); stopClickHook(); closeMailDetail(); }
+  if (sidebarOn && !inSidebar) { destroySidebar(); }
 }
 
 function startClickHook() {
@@ -442,7 +448,9 @@ function openMailDetail(seq) {
 }
 
 function closeMailDetail() {
-  if (mailWin && !mailWin.isDestroyed()) mailWin.hide();
+  if (mailKeeper) { clearInterval(mailKeeper); mailKeeper = null; }
+  if (mailWin && !mailWin.isDestroyed()) { try { mailWin.destroy(); } catch { /* 忽略 */ } }
+  mailWin = null;
 }
 
 ipcMain.on('mail:open', (_e, seq) => {
@@ -472,7 +480,7 @@ ipcMain.handle('mail:body', async (_e, seq) => {
   }
 });
 
-ipcMain.on('sidebar:close', () => { if (sbWin && !sbWin.isDestroyed()) { sbWin.hide(); stopClickHook(); } closeMailDetail(); });
+ipcMain.on('sidebar:close', () => { destroySidebar(); });
 
 function createTray() {
   const icon = nativeImage.createFromPath(path.join(__dirname, 'app', 'icon.ico'));
@@ -894,7 +902,7 @@ async function pollMail(silent = true) {
 
 function startMailPoll() {
   if (mailTimer) clearInterval(mailTimer);
-  mailTimer = setInterval(() => pollMail(), 60000);   /* 每分钟收一次 */
+  mailTimer = setInterval(() => pollMail(), 90000);   /* 每分钟收一次 */
   pollMail();
 }
 

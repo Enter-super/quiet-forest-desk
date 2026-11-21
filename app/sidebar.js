@@ -163,7 +163,7 @@ async function loadStats() {
   } catch { /* 忽略 */ }
 }
 loadStats();
-setInterval(loadStats, 2000);
+setInterval(() => { if (!document.hidden) loadStats(); }, 3000);
 
 /* ---------------- 内存占用下拉 ---------------- */
 var memOpen = false;   /* var：loadStats 在声明之前就会被调用 */
@@ -275,7 +275,7 @@ async function loadMedia() {
 }
 
 loadMedia();
-setInterval(loadMedia, 3000);
+setInterval(() => { if (!document.hidden) loadMedia(); }, 10000);
 
 $$('.m-ctl button').forEach((b) => {
   b.addEventListener('click', () => {
@@ -337,7 +337,7 @@ async function loadMail() {
 }
 
 loadMail();
-setInterval(loadMail, 30000);
+setInterval(() => { if (!document.hidden) loadMail(); }, 60000);
 if (SHELL.onMail) SHELL.onMail(() => loadMail());
 
 /* ---------------- 待办 ---------------- */
