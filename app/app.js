@@ -414,7 +414,6 @@
     el.tabIndex = 0;
     el.setAttribute('role', 'button');
     el.setAttribute('aria-label', item.name);
-    el.title = item.name;
     el.innerHTML = `<span class="dock-icon"></span><span class="run-dot"></span>`;
     paintIcon(el.firstElementChild, item);
     return el;
@@ -422,9 +421,42 @@
 
   function renderDock() {
     dockItems.textContent = '';
-    state.dock.forEach((it) => dockItems.appendChild(dockNode(it)));
+    let sepDone = false;
+    state.dock.forEach((it) => {
+      if (!sepDone && it.isDir) {
+        const sep = document.createElement('span');
+        sep.className = 'dock-sep';
+        sep.setAttribute('aria-hidden', 'true');
+        dockItems.appendChild(sep);
+        sepDone = true;
+      }
+      dockItems.appendChild(dockNode(it));
+    });
     measureDock();
     scheduleZones();
+    refreshRunning();
+  }
+
+  let runningTimer = 0;
+
+  async function refreshRunning() {
+    if (!SHELL || !SHELL.runningFor) return;
+    const items = $$('.dock-item', dockItems);
+    if (!items.length) return;
+    const paths = items.map((el) => {
+      const it = (state.dock || []).find((d) => d.id === el.dataset.id);
+      return it ? it.path : '';
+    });
+    try {
+      const flags = await SHELL.runningFor(paths);
+      if (!Array.isArray(flags)) return;
+      items.forEach((el, i) => el.classList.toggle('is-running', !!flags[i]));
+    } catch { /* 忽略 */ }
+  }
+
+  function startRunningWatch() {
+    if (runningTimer) clearInterval(runningTimer);
+    runningTimer = setInterval(() => { if (!document.hidden) refreshRunning(); }, 15000);
   }
 
   function measureDock() {
@@ -478,22 +510,24 @@
     const padL = Math.max(0, anchor), padR = Math.max(0, total - anchor);
     dockEl.style.setProperty('--pad-l', `${padL.toFixed(2)}px`);
     dockEl.style.setProperty('--pad-r', `${padR.toFixed(2)}px`);
-    dockEl.style.setProperty('--pad-t', `${((maxScale - 1) * W * 0.5).toFixed(2)}px`);
+    dockEl.style.setProperty('--pad-t', `${((maxScale - 1) * W * 0.72).toFixed(2)}px`);
     for (let i = 0; i < n; i++) {
       items[i].style.transform = `translate3d(${dxs[i].toFixed(2)}px,0,0)`;
-      items[i].firstElementChild.style.transform = `scale(${dockScales[i].toFixed(3)})`;
+      const lift = -(dockScales[i] - 1) * 34;
+      items[i].firstElementChild.style.transform = `translate3d(0,${lift.toFixed(2)}px,0) scale(${dockScales[i].toFixed(3)})`;
       items[i].style.zIndex = dockScales[i] > 1.02 ? String(10 + Math.round(dockScales[i] * 10)) : '';
+      items[i].classList.toggle('is-hot', dockScales[i] > 1.12);
     }
   }
 
   function updateDockTargets(x) {
     pointerX = x;
     if (drag && drag.moved) return;
-    const sigma = 96;
+    const sigma = 82;
     dockGeom.centers.forEach((c, i) => {
       const d = Math.abs(x - c);
       const g = Math.exp(-(d * d) / (2 * sigma * sigma));
-      if (dockSprings[i]) dockSprings[i].set(1 + 0.44 * g);
+      if (dockSprings[i]) dockSprings[i].set(1 + 0.62 * g);
     });
   }
 
@@ -501,6 +535,8 @@
     pointerX = null;
     dockSprings.forEach((s) => s.set(1));
   }
+
+  startRunningWatch();
 
   /* 悬停提示 */
   const tip = document.createElement('div');
@@ -866,6 +902,16 @@
     });
     dockItems.addEventListener('pointerout', (e) => {
       if (e.target.closest('.dock-item')) hideTip();
+    });
+
+    /* 点击弹跳（MyDockFinder 的标志性反馈） */
+    dockItems.addEventListener('pointerdown', (e) => {
+      const el = e.target.closest('.dock-item');
+      if (!el) return;
+      el.classList.remove('is-bounce');
+      void el.offsetWidth;
+      el.classList.add('is-bounce');
+      setTimeout(() => el.classList.remove('is-bounce'), 460);
     });
   }
 

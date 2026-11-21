@@ -60,6 +60,8 @@ contextBridge.exposeInMainWorld('desktopShell', {
   setLevel(kind, value) { ipcRenderer.send('sys:level', kind, value); },
   stats() { return ipcRenderer.invoke('sys:stats'); },
   display() { return ipcRenderer.invoke('sys:display'); },
+  running() { return ipcRenderer.invoke('sys:running'); },
+  runningFor(paths) { return ipcRenderer.invoke('sys:runningFor', paths); },
   media() { return ipcRenderer.invoke('sys:media'); },
   memTop() { return ipcRenderer.invoke('sys:memtop'); },
   mediaCtl(action) { ipcRenderer.send('media:ctl', action); },

@@ -248,6 +248,57 @@ function cpuPercent() {
 
 const cache = { gpu: { t: 0, v: null }, vram: { t: 0, v: null }, net: { t: 0, v: 0 }, media: { t: 0, v: null } };
 
+const runningCache = { t: 0, list: [] };
+
+ipcMain.handle('sys:running', async () => {
+  const now = Date.now();
+  if (now - runningCache.t < 20000) return runningCache.list;
+  runningCache.t = now;
+  return new Promise((resolve) => {
+    try {
+      execFile('powershell.exe',
+        ['-NoProfile', '-NonInteractive', '-Command',
+          'Get-Process | Select-Object -ExpandProperty ProcessName -Unique'],
+        { windowsHide: true, timeout: 6000 },
+        (err, stdout) => {
+          if (err) { resolve(runningCache.list); return; }
+          runningCache.list = String(stdout).split(/\r?\n/).map((s) => s.trim().toLowerCase()).filter(Boolean);
+          resolve(runningCache.list);
+        });
+    } catch { resolve(runningCache.list); }
+  });
+});
+
+ipcMain.handle('sys:runningFor', async (_e, paths) => {
+  const list = Array.isArray(paths) ? paths : [];
+  const now = Date.now();
+  if (now - runningCache.t >= 20000) {
+    runningCache.t = now;
+    await new Promise((resolve) => {
+      try {
+        execFile('powershell.exe',
+          ['-NoProfile', '-NonInteractive', '-Command',
+            'Get-Process | Select-Object -ExpandProperty ProcessName -Unique'],
+          { windowsHide: true, timeout: 6000 },
+          (err, stdout) => {
+            if (!err) {
+              runningCache.list = String(stdout).split(/\r?\n/).map((s) => s.trim().toLowerCase()).filter(Boolean);
+            }
+            resolve();
+          });
+      } catch { resolve(); }
+    });
+  }
+  const set = new Set(runningCache.list);
+  return list.map((p) => {
+    try {
+      const real = resolveRealPath(String(p || ''));
+      const base = path.basename(real, path.extname(real)).toLowerCase();
+      return set.has(base);
+    } catch { return false; }
+  });
+});
+
 ipcMain.handle('sys:display', async () => {
   const d = screen.getPrimaryDisplay().workArea;
   return { w: d.width, h: d.height };

@@ -1946,3 +1946,43 @@ html { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; 
   left: 50%;
   transform: translateX(-50%) rotate(-3.5deg);
 }
+
+/* ================= Dock 仿 MyDockFinder 精修 ================= */
+
+/* 图标以底边为原点放大，向上生长（像 Dock 那样从栏里"站起来"） */
+.dock-item .dock-icon {
+  transform-origin: bottom center;
+  transition: filter 200ms var(--ease-out);
+  will-change: transform;
+}
+.dock-item.is-hot .dock-icon { filter: drop-shadow(0 8px 16px rgba(0, 0, 0, .45)); }
+
+/* 运行指示点：只有运行中才亮 */
+.dock-item .run-dot {
+  opacity: 0;
+  transform: scale(.5);
+  background: rgba(255, 255, 255, .82);
+  box-shadow: 0 0 6px rgba(255, 255, 255, .45);
+}
+.dock-item.is-running .run-dot { opacity: 1; transform: scale(1); }
+
+/* 分隔线更纤细、居中 */
+.dock-sep {
+  width: 1px;
+  align-self: stretch;
+  margin: 8px 8px;
+  background: linear-gradient(180deg, transparent, rgba(255, 255, 255, .22), transparent);
+}
+
+/* 底板：图标抬起时只微微加高，让图标"探出"栏外 */
+.dock { transition: padding 220ms var(--ease-out); }
+
+/* 点击弹跳 */
+.dock-item.is-bounce .dock-icon { animation: dockBounce 460ms var(--ease-out); }
+@keyframes dockBounce {
+  0%   { transform: translate3d(0, 0, 0) scale(1); }
+  28%  { transform: translate3d(0, -10px, 0) scale(1.18); }
+  55%  { transform: translate3d(0, 0, 0) scale(0.94); }
+  78%  { transform: translate3d(0, -4px, 0) scale(1.04); }
+  100% { transform: translate3d(0, 0, 0) scale(1); }
+}
